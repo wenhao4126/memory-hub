@@ -1,0 +1,116 @@
+# ============================================================
+# 多智能体记忆中枢 - Docker Compose 配置
+# ============================================================
+# 功能：定义完整的微服务架构
+# 服务：PostgreSQL + pgvector + FastAPI + pgAdmin
+# 作者：小码
+# 日期：2026-03-06
+# ============================================================
+
+#version: '3.8'
+
+services:
+  # ============================================================
+  # PostgreSQL 数据库 + pgvector 向量扩展
+  # ============================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: memory-hub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-memory_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-memory_pass_2026}
+      POSTGRES_DB: ${DB_NAME:-memory_hub}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-memory_user} -d ${DB_NAME:-memory_hub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - memory-network
+
+  # ============================================================
+  # FastAPI 后端服务
+  # ============================================================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: memory-hub-api
+    restart: unless-stopped
+    environment:
+      # 数据库配置（连接 postgres 服务）
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-memory_user}
+      DB_PASSWORD: ${DB_PASSWORD:-memory_pass_2026}
+      DB_NAME: ${DB_NAME:-memory_hub}
+      # API 配置
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      API_DEBUG: ${API_DEBUG:-false}
+      # 嵌入模型配置
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-v4}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
+      # DashScope API 配置
+      DASHSCOPE_LLM_API_KEY: ${DASHSCOPE_LLM_API_KEY}
+      DASHSCOPE_EMBEDDING_API_KEY: ${DASHSCOPE_EMBEDDING_API_KEY}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
+      # LLM 配置（用于记忆提取和对话增强）
+      LLM_MODEL: ${LLM_MODEL:-qwen3.5-plus}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - memory-network
+
+  # ============================================================
+  # pgAdmin 管理界面（可选）
+  # ============================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: memory-hub-admin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${ADMIN_EMAIL:-admin@memory.hub}
+      PGADMIN_DEFAULT_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "${ADMIN_PORT:-5050}:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - memory-network
+
+# ============================================================
+# 数据卷定义
+# ============================================================
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# ============================================================
+# 网络定义
+# ============================================================
+networks:
+  memory-network:
+    driver: bridge

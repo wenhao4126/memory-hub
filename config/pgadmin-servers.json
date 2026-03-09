@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Memory Hub DB",
+      "Group": "Servers",
+      "Host": "memory-hub-db",
+      "Port": 5432,
+      "MaintenanceDB": "memory_hub",
+      "Username": "memory_user",
+      "Password": "memory_pass_2026",
+      "SSLMode": "prefer",
+      "Comment": "Memory Hub PostgreSQL Database"
+    }
+  }
+}
