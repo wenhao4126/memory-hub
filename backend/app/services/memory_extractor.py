@@ -141,7 +141,7 @@ AI：好的，我记住了，以后用吐槽风格和你聊
             "max_tokens": 1000
         }
         
-        async with httpx.AsyncClient(timeout=90.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 self.llm_api_url,
                 headers=headers,

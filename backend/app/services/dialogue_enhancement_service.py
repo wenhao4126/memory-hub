@@ -7,6 +7,7 @@
 # ============================================================
 
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 import uuid
 
@@ -188,7 +189,7 @@ class DialogueEnhancementService:
         2. 获取对话历史
         3. 生成增强回复
         4. 记录对话
-        5. 提取新记忆（可选）
+        5. 后台提取新记忆（异步，不阻塞）
         
         Args:
             agent_id: 智能体 ID
@@ -229,34 +230,64 @@ class DialogueEnhancementService:
             logger.info(f"对话已记录: {conversation_id}")
             
         except Exception as e:
-            logger.error(f"记录对话失败: {e}")
+            logger.error(f"记录对话失败: {e}", exc_info=True)
             result["conversation_id"] = None
         
-        # 3. 自动提取记忆
+        # 3. 后台异步提取记忆（不阻塞主流程）
         if auto_extract:
-            try:
-                from .auto_memory_service import auto_memory_service
-                from ..models.conversation import AutoExtractRequest
-                
-                extract_request = AutoExtractRequest(
-                    agent_id=uuid.UUID(agent_id),
-                    session_id=session_id,
-                    conversation_text=f"用户：{user_message}\nAI：{result['reply']}",
-                    auto_store=True
+            # 创建后台任务
+            asyncio.create_task(
+                self._extract_memories_background(
+                    agent_id, session_id, user_message, result["reply"]
                 )
-                
-                extract_result = await auto_memory_service.auto_extract_and_store(extract_request)
-                result["extracted_memories"] = extract_result.extracted_memories
-                result["stored_count"] = extract_result.stored_count
-                
-                logger.info(f"提取了 {extract_result.stored_count} 条新记忆")
-                
-            except Exception as e:
-                logger.warning(f"自动提取记忆失败: {e}")
-                result["extracted_memories"] = []
-                result["stored_count"] = 0
+            )
+            # 立即返回，不等待提取完成
+            result["extracted_memories"] = []
+            result["stored_count"] = 0
+            result["extraction_status"] = "processing"
+            logger.info("记忆提取任务已在后台启动")
         
         return result
+    
+    async def _extract_memories_background(
+        self,
+        agent_id: str,
+        session_id: str,
+        user_message: str,
+        ai_response: str
+    ):
+        """
+        后台提取记忆（不阻塞主流程）
+        
+        Args:
+            agent_id: 智能体 ID
+            session_id: 会话 ID
+            user_message: 用户消息
+            ai_response: AI 回复
+        """
+        try:
+            logger.info("后台记忆提取任务开始...")
+            
+            from .auto_memory_service import auto_memory_service
+            from ..models.conversation import AutoExtractRequest
+            
+            extract_request = AutoExtractRequest(
+                agent_id=uuid.UUID(agent_id),
+                session_id=session_id,
+                conversation_text=f"用户：{user_message}\nAI：{ai_response}",
+                auto_store=True
+            )
+            
+            extract_result = await auto_memory_service.auto_extract_and_store(extract_request)
+            
+            logger.info(
+                f"后台记忆提取完成：提取了 {len(extract_result.extracted_memories)} 条，"
+                f"存储了 {extract_result.stored_count} 条"
+            )
+            
+        except Exception as e:
+            # 失败只记录日志，不影响对话
+            logger.error(f"后台记忆提取失败: {e}", exc_info=True)
 
 
 # 全局服务实例
