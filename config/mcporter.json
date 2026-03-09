@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser",
+        "firefox"
+      ]
+    },
+    "brave-search": {
+      "baseUrl": "https://api.search.brave.com/api/v1/mcp"
+    },
+    "exa": {
+      "baseUrl": "https://mcp.exa.ai/mcp"
+    },
+    "douyin": {
+      "baseUrl": "http://localhost:18070/mcp"
+    }
+  },
+  "imports": []
+}

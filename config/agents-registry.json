@@ -1,0 +1,80 @@
+{
+  "agents": {
+    "team-researcher": {
+      "name": "小搜",
+      "role": "信息采集专家",
+      "skills": ["web_search", "data_collection", "api_integration"],
+      "mcp": ["playwright", "brave-search"],
+      "status": "active",
+      "tasks": ["搜索 AI 新闻", "抓取网页内容"],
+      "optimization": "已配置并行搜索"
+    },
+    "team-writer": {
+      "name": "小写",
+      "role": "文案撰写员",
+      "skills": ["translation", "summarization", "copywriting"],
+      "mcp": [],
+      "status": "active",
+      "tasks": ["三句话总结", "中文翻译"],
+      "optimization": "已配置分组并行"
+    },
+    "team-coder": {
+      "name": "小码",
+      "role": "代码工程师",
+      "skills": ["scripting", "automation", "debugging"],
+      "mcp": ["filesystem", "exec"],
+      "status": "standby",
+      "tasks": ["自动化脚本", "格式检查"],
+      "optimization": "已配置"
+    },
+    "team-code-reviewer": {
+      "name": "小审",
+      "role": "质量审核员",
+      "skills": ["quality_check", "validation", "review"],
+      "mcp": [],
+      "status": "idle",
+      "tasks": ["审核总结质量", "链接有效性检查"],
+      "optimization": "已配置"
+    },
+    "team-analyst": {
+      "name": "小析",
+      "role": "数据分析师",
+      "skills": ["trend_analysis", "data_processing", "insights"],
+      "mcp": [],
+      "status": "idle",
+      "tasks": ["热点趋势分析", "去重排序"],
+      "optimization": "已配置"
+    },
+    "team-browser": {
+      "name": "小览",
+      "role": "浏览器操作员",
+      "skills": ["web_scraping", "browser_automation", "screenshot"],
+      "mcp": ["playwright"],
+      "status": "idle",
+      "tasks": ["网页抓取", "动态内容获取"],
+      "optimization": "已配置"
+    },
+    "team-designer": {
+      "name": "小图",
+      "role": "AI 视觉设计师",
+      "skills": ["image_prompt", "image_search", "visual_design"],
+      "mcp": ["unsplash-api", "dall-e"],
+      "status": "active",
+      "tasks": ["配图生成", "图片搜索", "视觉创意"],
+      "optimization": "档案已创建，待配置 MCP"
+    },
+    "team-layout": {
+      "name": "小排",
+      "role": "内容排版师",
+      "skills": ["platform_format", "content_synthesis", "proofreading"],
+      "mcp": ["filesystem", "markdown"],
+      "status": "active",
+      "tasks": ["多平台排版", "内容合成", "格式检查"],
+      "optimization": "档案已创建，待配置 MCP"
+    }
+  },
+  "total_count": 8,
+  "active_count": 4,
+  "idle_count": 4,
+  "last_updated": "2026-03-03T14:15:00+08:00"
+}

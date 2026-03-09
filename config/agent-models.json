@@ -1,0 +1,29 @@
+{
+  "modelRouting": {
+    "team-researcher": {
+      "default": "bailian/kimi-k2.5",
+      "fast": "bailian/kimi-k2.5",
+      "deep": "anthropic/claude-3-7-sonnet-20250219"
+    },
+    "team-writer": {
+      "default": "bailian/kimi-k2.5",
+      "fast": "bailian/kimi-k2.5", 
+      "creative": "anthropic/claude-3-7-sonnet-20250219"
+    },
+    "team-coder": {
+      "default": "anthropic/claude-3-7-sonnet-20250219",
+      "fast": "bailian/kimi-k2.5",
+      "complex": "anthropic/claude-3-opus-20240229"
+    }
+  },
+  "timeoutRules": {
+    "default": 300,
+    "search": 180,
+    "write": 240,
+    "code": 300
+  },
+  "hooks": {
+    "onTimeout": "/home/wen/.openclaw/workspace/hooks/subagent-monitor.sh",
+    "onComplete": "/home/wen/.openclaw/workspace/hooks/subagent-complete.sh"
+  }
+}
