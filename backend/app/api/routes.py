@@ -460,8 +460,8 @@ async def create_memory(memory: MemoryCreate):
                 detail=f"智能体不存在: {memory.agent_id}"
             )
         
-        memory_id = await memory_service.create_memory(memory)
-        return MessageResponse(message=f"记忆创建成功，ID: {memory_id}")
+        memory_id, table, visibility, auto_routed = await memory_service.create_memory(memory)
+        return MessageResponse(message=f"记忆创建成功，ID: {memory_id}，已路由到 {table} 表")
     
     except HTTPException:
         raise

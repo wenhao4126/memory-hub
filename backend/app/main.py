@@ -17,7 +17,7 @@ from .database import db
 from .api.routes import router
 from .api.routes_conversations import router as conversations_router
 from .api.routes_knowledge import router as knowledge_router
-from .api.routes_knowledge import router as knowledge_router
+from .api.routes_memories_dual import router as dual_memories_router
 
 
 # ============================================================
@@ -82,6 +82,10 @@ tags_metadata = [
     {
         "name": "维护",
         "description": "🔧 **系统维护操作**",
+    },
+    {
+        "name": "双表记忆",
+        "description": "💾 **双表架构记忆管理（private/shared）**",
     },
 ]
 
@@ -162,6 +166,7 @@ app.add_middleware(
 app.include_router(router, prefix="/api/v1")
 app.include_router(conversations_router, prefix="/api/v1")
 app.include_router(knowledge_router, prefix="/api/v1")
+app.include_router(dual_memories_router, prefix="/api/v1")
 
 
 @app.get("/")

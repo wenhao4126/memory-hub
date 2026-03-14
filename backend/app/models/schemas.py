@@ -82,6 +82,10 @@ class MemoryCreate(MemoryBase):
     embedding: Optional[List[float]] = Field(None, description="向量嵌入")
     expires_at: Optional[datetime] = Field(None, description="过期时间")
     
+    # 双表架构相关字段
+    auto_route: bool = Field(default=True, description="是否自动路由到合适的表")
+    visibility: Optional[str] = Field(default=None, description="可见性：private/shared（auto_route=false 时使用）")
+    
     @field_validator('embedding')
     @classmethod
     def validate_embedding(cls, v):
@@ -127,7 +131,7 @@ class MemorySearchRequest(BaseModel):
     """记忆搜索请求（旧版：需要 query_embedding）"""
     query_embedding: List[float] = Field(..., description="查询向量")
     agent_id: Optional[UUID4] = Field(None, description="限定智能体")
-    match_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="相似度阈值")
+    match_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="相似度阈值")
     match_count: int = Field(default=10, ge=1, le=100, description="返回数量")
     
     @field_validator('query_embedding')
@@ -143,7 +147,7 @@ class MemoryTextSearchRequest(BaseModel):
     """记忆文本搜索请求（新版：接受 query 文本）"""
     query: str = Field(..., min_length=1, description="查询文本")
     agent_id: Optional[UUID4] = Field(None, description="限定智能体")
-    match_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="相似度阈值")
+    match_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="相似度阈值")
     match_count: int = Field(default=10, ge=1, le=100, description="返回数量")
 
 
