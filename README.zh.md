@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hanhao/memory-hub">
+  <a href="https://github.com/wen41/memory-hub">
     <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
   </a>
   <a href="LICENSE">
@@ -212,7 +212,7 @@ nano .env
 #### 1️⃣ 克隆项目
 
 ```bash
-git clone https://github.com/hanhao/memory-hub.git
+git clone https://github.com/wen41/memory-hub.git
 cd memory-hub
 ```
 
@@ -799,7 +799,7 @@ ALERT_THRESHOLD_LATENCY_MS=1000
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/hanhao/memory-hub.git
+git clone https://github.com/wen41/memory-hub.git
 cd memory-hub
 
 # 2. 创建开发分支

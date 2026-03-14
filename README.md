@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hanhao/memory-hub">
+  <a href="https://github.com/wen41/memory-hub">
     <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
   </a>
   <a href="LICENSE">
@@ -148,7 +148,7 @@ memory-hub/
 ### 1️⃣ 克隆项目
 
 ```bash
-git clone https://github.com/hanhao/memory-hub.git
+git clone https://github.com/wen41/memory-hub.git
 cd memory-hub
 ```
 

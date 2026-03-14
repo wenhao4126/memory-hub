@@ -292,7 +292,7 @@ USER_GUIDE.md 场景示例 (30 分钟)
 ### 遇到问题？
 
 1. **查看文档**：[USER_GUIDE.md](USER_GUIDE.md) 的"常见问题"部分
-2. **GitHub Issues**：https://github.com/hanhao/memory-hub/issues
+2. **GitHub Issues**：https://github.com/wen41/memory-hub/issues
 3. **API 文档**：http://localhost:8000/docs
 4. **联系团队**：通过傻妞管家团队
 
