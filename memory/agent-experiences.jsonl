@@ -1,0 +1,5 @@
+# 傻妞管家 - 手下智能体经验数据库
+# 格式: JSON Lines，每行一条记录
+
+{"timestamp": "2026-03-03T09:00:00+08:00", "agent": "team-researcher", "task": "搜索AI新闻", "duration": 180, "success": true, "quality": 8.5, "notes": "Hacker News API响应快，MarkTechPost需要jina.ai抓取", "optimization": "优先用API，其次用jina.ai"}
+{"timestamp": "2026-03-03T09:05:00+08:00", "agent": "team-writer", "task": "三句话总结", "duration": 120, "success": true, "quality": 9.0, "notes": "长文章先抓重点段落再总结效果更好", "optimization": "先用jina.ai提取关键内容"}

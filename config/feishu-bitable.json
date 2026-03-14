@@ -1,0 +1,35 @@
+{
+  "app_id": "cli_a92c27eb15389ccb",
+  "app_secret": "9QmBxZawTuJOcdZqnBqfognofybcSVSO",
+  "base_token": "Grldb26ojaLXIUsGE7Icwk3pnjg",
+  "table_id": "tbl1xaXn0LdtfWtJ",
+  "field_mapping": {
+    "task_id": "任务 ID",
+    "description": "任务描述",
+    "agent": "负责人",
+    "status": "状态",
+    "priority": "优先级",
+    "start_time": "开始时间",
+    "due_time": "截止时间",
+    "complete_time": "完成时间",
+    "result": "任务结果",
+    "notes": "备注"
+  },
+  "status_options": {
+    "pending": "待办",
+    "in_progress": "进行中",
+    "completed": "已完成",
+    "timeout": "已超时",
+    "cancelled": "已取消"
+  },
+  "agent_options": [
+    "小搜",
+    "小写",
+    "小码",
+    "小审",
+    "小析",
+    "小览",
+    "小图",
+    "小排"
+  ]
+}
