@@ -1,0 +1,57 @@
+# ============================================================
+# Memory Hub Worker Pool - Systemd Service
+# ============================================================
+# 功能：将小码池注册为系统服务，开机自启动
+# 作者：小码 🟡
+# 日期：2026-03-16
+# ============================================================
+# 安装方法：
+#   sudo cp memory-hub-worker-pool.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable memory-hub-worker-pool
+#   sudo systemctl start memory-hub-worker-pool
+# ============================================================
+# 管理命令：
+#   启动：sudo systemctl start memory-hub-worker-pool
+#   停止：sudo systemctl stop memory-hub-worker-pool
+#   重启：sudo systemctl restart memory-hub-worker-pool
+#   状态：sudo systemctl status memory-hub-worker-pool
+#   日志：sudo journalctl -u memory-hub-worker-pool -f
+# ============================================================
+
+[Unit]
+Description=Memory Hub Worker Pool - 小码池后台服务
+Documentation=https://github.com/your-repo/memory-hub
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=forking
+User=wen
+Group=wen
+WorkingDirectory=/home/wen/projects/memory-hub
+
+# 启动命令：5 个小码，30 秒轮询间隔
+ExecStart=/home/wen/projects/memory-hub/scripts/start-worker-pool.sh 5 30
+ExecStop=/home/wen/projects/memory-hub/scripts/stop-worker-pool.sh
+
+# 重启策略
+Restart=on-failure
+RestartSec=10
+
+# 资源限制
+LimitNOFILE=65536
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# 环境变量
+Environment="PYTHONUNBUFFERED=1"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=memory-hub-worker
+
+[Install]
+WantedBy=multi-user.target

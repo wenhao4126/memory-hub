@@ -69,6 +69,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      # 挂载 agents 目录（搜索服务依赖）
+      - ./agents:/app/agents:ro
+      # 挂载文档存储目录（Obsidian vault）
+      - /home/wen/tools/obsidian:/home/wen/tools/obsidian
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health')"]
       interval: 30s

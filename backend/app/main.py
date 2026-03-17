@@ -18,6 +18,8 @@ from .api.routes import router
 from .api.routes_conversations import router as conversations_router
 from .api.routes_knowledge import router as knowledge_router
 from .api.routes_memories_dual import router as dual_memories_router
+from .api.task_memories import router as task_memories_router
+from .api.routes_search import router as search_router
 
 
 # ============================================================
@@ -86,6 +88,10 @@ tags_metadata = [
     {
         "name": "双表记忆",
         "description": "💾 **双表架构记忆管理（private/shared）**",
+    },
+    {
+        "name": "任务记忆",
+        "description": "🔗 **任务与记忆系统集成（Phase 3）**",
     },
 ]
 
@@ -163,10 +169,13 @@ app.add_middleware(
 )
 
 # 注册路由
+# 注意：具体路由（如 /memories/documents）必须在参数路由（如 /memories/{memory_id}）之前注册
+app.include_router(task_memories_router, prefix="/api/v1")  # Phase 3: 任务记忆路由（先注册具体路由）
 app.include_router(router, prefix="/api/v1")
 app.include_router(conversations_router, prefix="/api/v1")
 app.include_router(knowledge_router, prefix="/api/v1")
 app.include_router(dual_memories_router, prefix="/api/v1")
+app.include_router(search_router, prefix="/api/v1")  # Phase 3: 搜索集成路由
 
 
 @app.get("/")

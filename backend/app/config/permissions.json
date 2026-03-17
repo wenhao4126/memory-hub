@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "description": "Memory Hub 数据库表访问权限配置（憨货亲定 2026-03-17）",
+  
+  "agents": {
+    "傻妞": "2ced6241-9915-47f7-86d0-32ea8db0eb68",
+    "小搜": "d5fa91a1-dd55-4e26-a151-126c1a977a8d",
+    "小写": "7ffb2eab-719c-4894-abba-a84f05e6d6e2",
+    "小码": "3c9d696c-62e1-4ecf-9a78-46deed923080",
+    "小审": "04a87468-fbf1-4f25-9a4d-4e03f2963a36",
+    "小析": "ca71407b-f8c2-43ac-ad40-b50756036e59",
+    "小览": "986150df-eb22-4f46-b43f-cc4f632f7314",
+    "小图": "86df09c2-2ba8-431e-a376-a76d661fa80b",
+    "小排": "cae3ad57-60c2-445a-8356-b8c9293a930c"
+  },
+
+  "tables": {
+    "parallel_tasks": {
+      "description": "并行任务表 - 只有傻妞能写，5个小码能读",
+      "read": ["小码", "team-coder2", "team-coder3", "team-coder4", "team-coder5"],
+      "write": ["傻妞"],
+      "note": "小码池（team-coder1-5）只能读任务，傻妞创建任务"
+    },
+    
+    "shared_memories": {
+      "description": "共享记忆表 - 所有智能体能读，小搜/小写/小审/小析/小览/小图/小排能写",
+      "read": ["all"],
+      "write": ["小搜", "小写", "小审", "小析", "小览", "小图", "小排"],
+      "forbidden_write": ["小码", "team-coder2", "team-coder3", "team-coder4", "team-coder5"],
+      "note": "小码池不能写共享记忆（防止数据污染）"
+    },
+    
+    "knowledge": {
+      "description": "知识库表 - 所有智能体都能读写",
+      "read": ["all"],
+      "write": ["all"],
+      "note": "生成 .md 文档时使用"
+    },
+    
+    "private_memories": {
+      "description": "私人记忆表 - 只有创建者能访问",
+      "read": ["owner"],
+      "write": ["owner"],
+      "note": "私人记忆，只能访问自己的"
+    }
+  },
+
+  "agent_aliases": {
+    "team-coder": "小码",
+    "team-coder1": "小码",
+    "team-coder2": "小码2",
+    "team-coder3": "小码3",
+    "team-coder4": "小码4",
+    "team-coder5": "小码5"
+  }
+}
