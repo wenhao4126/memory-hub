@@ -8,19 +8,46 @@ venv/
 env/
 .env.local
 .venv
+*.egg-info/
+dist/
+build/
+*.egg
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.iml
 
 # Tests
 tests/
 *.test.py
 .pytest_cache/
+htmlcov/
+.coverage
+.tox/
+.nox/
+
+# Documentation
+docs/
+*.md
+README*
+CONTRIBUTING*
+CHANGELOG*
+LICENSE*
+
+# Git
+.git/
+.gitignore
+.gitattributes
 
 # Misc
 *.log
 *.tmp
 .DS_Store
+.env.example
+Makefile
+docker-compose*.yml
+.dockerignore
+Dockerfile*

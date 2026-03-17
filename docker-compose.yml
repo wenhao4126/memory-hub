@@ -22,9 +22,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-memory_pass_2026}
       POSTGRES_DB: ${DB_NAME:-memory_hub}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /home/wen/tools/postgresql/data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-memory_user} -d ${DB_NAME:-memory_hub}"]
@@ -108,8 +108,6 @@ services:
 # 数据卷定义
 # ============================================================
 volumes:
-  postgres_data:
-    driver: local
   pgadmin_data:
     driver: local
 
