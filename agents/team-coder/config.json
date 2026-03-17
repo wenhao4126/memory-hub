@@ -5,7 +5,7 @@
   "skills": ["bash_scripting", "python", "automation", "debugging"],
   "mcp_servers": ["filesystem", "exec"],
   "tools": ["read", "write", "edit", "exec"],
-  "default_model": "anthropic/claude-3-7-sonnet-20250219",
+  "default_model": "bailian/glm-5",
   "fallback_model": "bailian/kimi-k2.5",
   "timeout": 300,
   "hooks": {

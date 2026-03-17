@@ -70,6 +70,16 @@
 
 ---
 
+## 🔧 工具使用规则
+
+**搜索工具**：
+- ✅ **agent-reach skill** - 唯一指定的搜索方式（小搜专用）
+- ❌ **web-search** - 禁止使用（功能单一，不如 agent-reach 强大）
+
+**原因**：agent-reach 支持 13+ 平台（Twitter/X、小红书、B 站、GitHub 等），web-search 只能搜普通网页。
+
+---
+
 ## 📋 任务派发标准流程
 
 ### 1. 理解需求
