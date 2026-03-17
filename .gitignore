@@ -87,8 +87,20 @@ USER.md
 IDENTITY.md
 HEARTBEAT.md
 BOOTSTRAP.md
-TASK_CURRENT.md
-TASK_SYSTEM.md
+
+# 任务相关文件（私人配置）
+TASK_*.md
+
+# 研究报告（私人数据）
+*_report.md
+*_REPORT.md
+research_report_*.md
+*报告.md
+*手册.md
+*指南.md
+
+# 测试文件
+test_*.py
 
 # 临时文件
 *.png
@@ -98,11 +110,11 @@ TASK_SYSTEM.md
 venv/
 test_venv/
 
-# 个人笔记
-*_REPORT.md
-*报告.md
-*手册.md
-*指南.md
+# 临时 Docker 配置
+docker-compose.*.yml
+!docker-compose.yml
+
+# 其他私人笔记
 DAILY_AI_NEWS.md
 
 # 临时脚本
