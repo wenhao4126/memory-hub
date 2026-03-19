@@ -23,7 +23,7 @@
 
 ```bash
 # 执行安装脚本
-curl -fsSL https://raw.githubusercontent.com/wen41/memory-hub/master/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wenhao4126/memory-hub/master/scripts/install.sh | bash
 
 # 等待安装完成（约 30 秒）
 # 安装过程会：
@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/wen41/memory-hub/master/scripts/ins
 
 ```bash
 # 克隆项目
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 
 # 启动 Docker 容器

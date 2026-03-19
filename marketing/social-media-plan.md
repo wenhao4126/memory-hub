@@ -246,7 +246,7 @@ Hi [名字],
 我是 Memory Hub 的开发者，一个开源的 AI 记忆管理系统。
 
 注意到您经常分享 AI/开源相关内容，想邀请您体验：
-https://github.com/wen41/memory-hub
+https://github.com/wenhao4126/memory-hub
 
 5 分钟快速上手，希望能帮到您的项目！
 

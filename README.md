@@ -14,7 +14,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/wenhao4126/memory-hub" alt="GitHub license">
   </a>
-  <a href="https://github.com/wen41/memory-hub">
+  <a href="https://github.com/wenhao4126/memory-hub">
     <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
   </a>
   <a href="docker-compose.yml">
@@ -56,7 +56,7 @@
 
 ```bash
 # 一键安装脚本
-curl -fsSL https://raw.githubusercontent.com/wen41/memory-hub/master/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wenhao4126/memory-hub/master/scripts/install.sh | bash
 
 # 初始化配置
 memory-hub init
@@ -82,7 +82,7 @@ memory-hub start
 
 ```bash
 # 克隆项目
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 
 # 配置环境变量
@@ -367,7 +367,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
 
 ```bash
 # Fork 项目
-git fork https://github.com/wen41/memory-hub
+git fork https://github.com/wenhao4126/memory-hub
 
 # 克隆到本地
 git clone git@github.com:your-username/memory-hub.git

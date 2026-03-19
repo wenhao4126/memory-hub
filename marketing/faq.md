@@ -196,7 +196,7 @@ memory-hub uninstall
 rm -rf ~/.memory-hub
 
 # 重新安装
-curl -fsSL https://raw.githubusercontent.com/wen41/memory-hub/master/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wenhao4126/memory-hub/master/scripts/install.sh | bash
 ```
 
 ---
@@ -242,7 +242,7 @@ docker-compose up -d
 **方式三：重新安装**
 ```bash
 memory-hub uninstall
-curl -fsSL https://raw.githubusercontent.com/wen41/memory-hub/master/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wenhao4126/memory-hub/master/scripts/install.sh | bash
 ```
 
 **升级前注意**:
@@ -922,7 +922,7 @@ curl http://localhost:8000/api/v1/access-logs?agent_id=xxx
 
 ### Q31: 如何提 Issue？
 
-**A**: GitHub Issues: https://github.com/wen41/memory-hub/issues
+**A**: GitHub Issues: https://github.com/wenhao4126/memory-hub/issues
 
 **提 Issue 模板**:
 
@@ -962,7 +962,7 @@ curl http://localhost:8000/api/v1/access-logs?agent_id=xxx
 **步骤**:
 ```bash
 # 1. Fork 项目
-git fork https://github.com/wen41/memory-hub
+git fork https://github.com/wenhao4126/memory-hub
 
 # 2. 克隆到本地
 git clone git@github.com:your-username/memory-hub.git
@@ -992,7 +992,7 @@ git push origin feature/your-feature
 
 **A**:
 
-- 💬 GitHub Discussions: https://github.com/wen41/memory-hub/discussions
+- 💬 GitHub Discussions: https://github.com/wenhao4126/memory-hub/discussions
 - 📧 邮件列表：memory-hub@googlegroups.com（待创建）
 - 🐦 Twitter: @MemoryHub（待创建）
 
@@ -1003,7 +1003,7 @@ git push origin feature/your-feature
 **获取帮助**:
 
 1. 📖 [完整文档](../docs/)
-2. 💬 [GitHub Issues](https://github.com/wen41/memory-hub/issues)
+2. 💬 [GitHub Issues](https://github.com/wenhao4126/memory-hub/issues)
 3. 📧 邮件联系（待添加）
 4. 🐦 社交媒体（待添加）
 

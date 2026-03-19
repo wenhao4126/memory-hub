@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wen41/memory-hub">
+  <a href="https://github.com/wenhao4126/memory-hub">
     <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
   </a>
   <a href="LICENSE">
@@ -179,7 +179,7 @@ Memory Hub 实现了独特的 Hook 机制，确保智能体在对话过程中不
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 ```
 
@@ -212,7 +212,7 @@ nano .env
 #### 1️⃣ 克隆项目
 
 ```bash
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 ```
 
@@ -799,7 +799,7 @@ ALERT_THRESHOLD_LATENCY_MS=1000
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 
 # 2. 创建开发分支

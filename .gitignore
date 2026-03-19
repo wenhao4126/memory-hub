@@ -132,8 +132,5 @@ yarn-error.log
 tests/
 *.test.js
 
-# 安装脚本
-install.sh
-uninstall.sh
-scripts/install.sh
+
 

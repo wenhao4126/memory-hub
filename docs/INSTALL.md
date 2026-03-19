@@ -40,7 +40,7 @@
 ### 步骤 1：克隆项目
 
 ```bash
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 ```
 
@@ -333,8 +333,8 @@ curl http://localhost:8000/api/v1/agents/<agent_id>/memories
 ## 💡 技术支持
 
 - 📧 Email: [您的邮箱]
-- 💬 Issues: https://github.com/wen41/memory-hub/issues
-- 📚 文档：https://github.com/wen41/memory-hub/tree/master/docs
+- 💬 Issues: https://github.com/wenhao4126/memory-hub/issues
+- 📚 文档：https://github.com/wenhao4126/memory-hub/tree/master/docs
 
 ---
 

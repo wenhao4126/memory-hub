@@ -1,7 +1,7 @@
 {
   "name": "memory-hub",
   "version": "1.0.0",
-  "description": "Memory Hub - Centralized memory management for AI agents",
+  "description": "多智能体记忆中枢 - Centralized memory management for AI agents",
   "type": "module",
   "main": "lib/commands.js",
   "bin": {
@@ -15,14 +15,33 @@
   "keywords": [
     "memory",
     "ai",
+    "llm",
+    "vector-search",
     "agent",
     "storage"
   ],
-  "author": "傻妞 Team",
+  "author": "憨货 <hanhuo@example.com>",
   "license": "MIT",
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "docs"
+  ],
   "dependencies": {
     "commander": "^12.0.0",
     "chalk": "^5.3.0",
     "ora": "^8.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wen41/memory-hub.git"
+  },
+  "homepage": "https://github.com/wen41/memory-hub#readme",
+  "bugs": {
+    "url": "https://github.com/wen41/memory-hub/issues"
   }
 }

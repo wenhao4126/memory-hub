@@ -18,7 +18,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 
 # 2. 配置环境变量
@@ -42,13 +42,13 @@ docker compose ps
 
 ```bash
 # 下载并执行部署脚本
-curl -fsSL https://raw.githubusercontent.com/wen41/memory-hub/master/scripts/deploy-low-end.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wenhao4126/memory-hub/master/scripts/deploy-low-end.sh | bash
 ```
 
 或者手动克隆后执行：
 
 ```bash
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 chmod +x scripts/deploy-low-end.sh
 sudo ./scripts/deploy-low-end.sh
@@ -120,7 +120,7 @@ sudo systemctl restart docker
 
 ```bash
 cd /opt
-git clone https://github.com/wen41/memory-hub.git
+git clone https://github.com/wenhao4126/memory-hub.git
 cd memory-hub
 
 # 配置环境变量
@@ -335,4 +335,4 @@ docker compose logs -f
 
 ## 支持
 
-如有问题，请提交 [GitHub Issue](https://github.com/wen41/memory-hub/issues)。
+如有问题，请提交 [GitHub Issue](https://github.com/wenhao4126/memory-hub/issues)。
