@@ -6,14 +6,124 @@
 
 ## 📖 目录
 
-1. [API 概览](#api 概览)
-2. [认证说明](#认证说明)
-3. [智能体 API](#智能体 api)
-4. [记忆 API](#记忆 api)
-5. [对话 API](#对话 api)
-6. [搜索 API](#搜索 api)
-7. [维护 API](#维护 api)
-8. [错误码](#错误码)
+1. [快速入门](#快速入门)
+2. [API 概览](#api 概览)
+3. [认证说明](#认证说明)
+4. [智能体 API](#智能体-api)
+5. [记忆 API](#记忆-api)
+6. [对话 API](#对话-api)
+7. [搜索 API](#搜索-api)
+8. [维护 API](#维护-api)
+9. [错误码](#错误码)
+
+---
+
+## 快速入门
+
+### 5 分钟上手
+
+**第 1 步：启动服务**
+```bash
+memory-hub start
+```
+
+**第 2 步：创建智能体**
+```bash
+curl -X POST http://localhost:8000/api/v1/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "小笔",
+    "description": "文案专家",
+    "capabilities": ["写作", "翻译"]
+  }'
+```
+保存返回的 `agent_id`。
+
+**第 3 步：创建记忆**
+```bash
+curl -X POST http://localhost:8000/api/v1/memories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "你的 agent_id",
+    "content": "用户喜欢简洁的回答，讨厌废话",
+    "memory_type": "preference",
+    "importance": 0.8,
+    "tags": ["用户偏好"]
+  }'
+```
+
+**第 4 步：搜索记忆**
+```bash
+curl -X POST http://localhost:8000/api/v1/memories/search/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "用户喜欢什么？",
+    "match_count": 5
+  }'
+```
+
+**第 5 步：带记忆的对话**
+```bash
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "你的 agent_id",
+    "user_message": "你好",
+    "use_memory": true,
+    "use_history": true
+  }'
+```
+
+### 代码示例
+
+**Python**:
+```python
+import requests
+
+BASE_URL = "http://localhost:8000/api/v1"
+
+# 创建智能体
+agent = requests.post(f"{BASE_URL}/agents", json={
+    "name": "小笔",
+    "description": "文案专家"
+}).json()
+
+# 创建记忆
+requests.post(f"{BASE_URL}/memories", json={
+    "agent_id": agent["id"],
+    "content": "用户偏好",
+    "memory_type": "preference"
+})
+
+# 搜索记忆
+results = requests.post(f"{BASE_URL}/memories/search/text", json={
+    "query": "用户喜欢什么",
+    "match_count": 5
+}).json()
+```
+
+**JavaScript**:
+```javascript
+const BASE_URL = "http://localhost:8000/api/v1";
+
+// 创建智能体
+const agent = await fetch(`${BASE_URL}/agents`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ name: "小笔", description: "文案专家" })
+}).then(r => r.json());
+
+// 创建记忆
+await fetch(`${BASE_URL}/memories`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    agent_id: agent.id,
+    content: "用户偏好",
+    memory_type: "preference"
+  })
+});
+```
 
 ---
 

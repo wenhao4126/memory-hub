@@ -1,0 +1,198 @@
+# ============================================================
+# Memory Hub - 配置文件模板
+# ============================================================
+# 作者：小码 4 🟡
+# 日期：2026-03-19
+# 
+# 使用方法：
+#   1. 复制此文件为 config.yaml
+#   2. 修改配置值
+#   3. 重启 Memory Hub 服务
+# ============================================================
+
+# ============================================================
+# 服务器配置
+# ============================================================
+server:
+  # 监听主机
+  host: "0.0.0.0"
+  
+  # 监听端口
+  port: 8000
+  
+  # 工作模式：development | production
+  mode: "development"
+  
+  # CORS 配置
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "Content-Type"
+      - "Authorization"
+
+# ============================================================
+# 数据库配置
+# ============================================================
+database:
+  # 连接方式：url | separate
+  # url: 使用 DATABASE_URL 环境变量
+  # separate: 使用下面的独立配置
+  connection_mode: "url"
+  
+  # 独立配置（当 connection_mode: separate 时使用）
+  host: "localhost"
+  port: 5432
+  name: "memory_hub"
+  user: "memory_user"
+  # 密码建议使用环境变量：${DB_PASSWORD}
+  password: "${DB_PASSWORD}"
+  
+  # 连接池配置
+  pool:
+    min: 5
+    max: 20
+    idle_timeout: 30000
+    acquire_timeout: 30000
+
+# ============================================================
+# 向量搜索配置
+# ============================================================
+vector:
+  # 向量维度（必须与 embedding 模型匹配）
+  dimensions: 1536
+  
+  # 搜索匹配数量
+  default_match_count: 5
+  
+  # 相似度阈值（0-1，越低越宽松）
+  similarity_threshold: 0.7
+  
+  # 索引类型：ivfflat | hnsw
+  index_type: "ivfflat"
+  
+  # 索引参数
+  index_params:
+    lists: 100
+    probes: 10
+
+# ============================================================
+# 日志配置
+# ============================================================
+logging:
+  # 日志级别：DEBUG | INFO | WARNING | ERROR
+  level: "INFO"
+  
+  # 日志格式：json | text
+  format: "text"
+  
+  # 输出到文件
+  file:
+    enabled: true
+    path: "logs/memory-hub.log"
+    max_size: "10MB"
+    backup_count: 5
+  
+  # 输出到控制台
+  console:
+    enabled: true
+    colorize: true
+
+# ============================================================
+# 记忆提取配置
+# ============================================================
+memory_extraction:
+  # 是否启用自动提取
+  enabled: true
+  
+  # 提取器类型：simple | llm
+  extractor_type: "simple"
+  
+  # LLM 配置（当 extractor_type: llm 时使用）
+  llm:
+    provider: "dashscope"
+    model: "qwen-plus"
+    api_key: "${DASHSCOPE_API_KEY}"
+  
+  # 提取规则
+  rules:
+    # 最小内容长度
+    min_content_length: 10
+    
+    # 最大内容长度
+    max_content_length: 2000
+    
+    # 自动标签
+    auto_tag: true
+    max_tags: 5
+
+# ============================================================
+# 智能体注册表配置
+# ============================================================
+agents_registry:
+  # 注册表文件路径
+  config_path: "config/agents-registry.json"
+  
+  # 自动注册新智能体
+  auto_register: true
+  
+  # 默认智能体配置
+  defaults:
+    lock_duration: 30  # 分钟
+    timeout: 30        # 分钟
+    max_retries: 3
+
+# ============================================================
+# 性能优化配置
+# ============================================================
+performance:
+  # 缓存配置
+  cache:
+    enabled: true
+    type: "memory"  # memory | redis
+    ttl: 300  # 秒
+    
+  # 批量操作配置
+  batch:
+    max_size: 100
+    timeout: 1000  # 毫秒
+
+# ============================================================
+# 安全配置
+# ============================================================
+security:
+  # 请求速率限制
+  rate_limit:
+    enabled: false
+    requests_per_minute: 60
+  
+  # API 密钥（生产环境建议启用）
+  api_key:
+    enabled: false
+    header_name: "X-API-Key"
+    keys:
+      - "${MEMORY_HUB_API_KEY}"
+
+# ============================================================
+# 监控配置
+# ============================================================
+monitoring:
+  # 健康检查
+  health_check:
+    enabled: true
+    endpoint: "/api/v1/health"
+    interval: 30  # 秒
+  
+  # 指标收集
+  metrics:
+    enabled: false
+    endpoint: "/metrics"
+    port: 9090

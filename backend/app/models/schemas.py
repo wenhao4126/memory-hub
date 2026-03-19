@@ -8,7 +8,8 @@
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, UUID4, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from uuid import UUID
 from enum import Enum
 import uuid
 
@@ -58,7 +59,7 @@ class Agent(AgentBase):
     """智能体完整模型"""
     model_config = ConfigDict(from_attributes=True)
     
-    id: UUID4
+    id: UUID
     created_at: datetime
     updated_at: datetime
 
@@ -78,7 +79,7 @@ class MemoryBase(BaseModel):
 
 class MemoryCreate(MemoryBase):
     """创建记忆请求模型"""
-    agent_id: UUID4 = Field(..., description="所属智能体 ID")
+    agent_id: UUID = Field(..., description="所属智能体 ID")
     embedding: Optional[List[float]] = Field(None, description="向量嵌入")
     expires_at: Optional[datetime] = Field(None, description="过期时间")
     
@@ -118,8 +119,8 @@ class Memory(MemoryBase):
     """记忆完整模型"""
     model_config = ConfigDict(from_attributes=True)
     
-    id: UUID4
-    agent_id: UUID4
+    id: UUID
+    agent_id: UUID
     embedding: Optional[List[float]] = None
     access_count: int = 0
     created_at: datetime
@@ -130,7 +131,7 @@ class Memory(MemoryBase):
 class MemorySearchRequest(BaseModel):
     """记忆搜索请求（旧版：需要 query_embedding）"""
     query_embedding: List[float] = Field(..., description="查询向量")
-    agent_id: Optional[UUID4] = Field(None, description="限定智能体")
+    agent_id: Optional[UUID] = Field(None, description="限定智能体")
     match_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="相似度阈值")
     match_count: int = Field(default=10, ge=1, le=100, description="返回数量")
     
@@ -146,15 +147,15 @@ class MemorySearchRequest(BaseModel):
 class MemoryTextSearchRequest(BaseModel):
     """记忆文本搜索请求（新版：接受 query 文本）"""
     query: str = Field(..., min_length=1, description="查询文本")
-    agent_id: Optional[UUID4] = Field(None, description="限定智能体")
+    agent_id: Optional[UUID] = Field(None, description="限定智能体")
     match_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="相似度阈值")
     match_count: int = Field(default=10, ge=1, le=100, description="返回数量")
 
 
 class MemorySearchResult(BaseModel):
     """记忆搜索结果"""
-    id: UUID4
-    agent_id: UUID4
+    id: UUID
+    agent_id: UUID
     content: str
     similarity: float
     memory_type: MemoryType
@@ -174,7 +175,7 @@ class SessionBase(BaseModel):
 
 class SessionCreate(SessionBase):
     """创建会话请求"""
-    agent_id: UUID4
+    agent_id: UUID
     expires_at: Optional[datetime] = None
 
 
@@ -182,8 +183,8 @@ class Session(SessionBase):
     """会话完整模型"""
     model_config = ConfigDict(from_attributes=True)
     
-    id: UUID4
-    agent_id: UUID4
+    id: UUID
+    agent_id: UUID
     created_at: datetime
     expires_at: Optional[datetime] = None
 
@@ -218,7 +219,7 @@ class ErrorResponse(BaseModel):
 
 class KnowledgeCreate(BaseModel):
     """创建知识请求模型"""
-    agent_id: UUID4 = Field(..., description="所属智能体 ID")
+    agent_id: UUID = Field(..., description="所属智能体 ID")
     title: str = Field(..., min_length=1, max_length=500, description="知识标题")
     content: str = Field(..., min_length=1, max_length=50000, description="知识内容")
     category: Optional[str] = Field(None, max_length=100, description="分类")
@@ -242,8 +243,8 @@ class KnowledgeResponse(BaseModel):
     """知识完整模型"""
     model_config = ConfigDict(from_attributes=True)
     
-    id: UUID4
-    agent_id: UUID4
+    id: UUID
+    agent_id: UUID
     title: str
     content: str
     category: Optional[str] = None
@@ -258,7 +259,7 @@ class KnowledgeResponse(BaseModel):
 class KnowledgeSearchRequest(BaseModel):
     """知识搜索请求"""
     query: str = Field(..., min_length=1, description="查询文本")
-    agent_id: Optional[UUID4] = Field(None, description="限定智能体")
+    agent_id: Optional[UUID] = Field(None, description="限定智能体")
     category: Optional[str] = Field(None, description="限定分类")
     match_threshold: float = Field(default=0.3, ge=0.0, le=1.0, description="相似度阈值")
     match_count: int = Field(default=5, ge=1, le=50, description="返回数量")
@@ -266,8 +267,8 @@ class KnowledgeSearchRequest(BaseModel):
 
 class KnowledgeSearchResponse(BaseModel):
     """知识搜索结果"""
-    id: UUID4
-    agent_id: UUID4
+    id: UUID
+    agent_id: UUID
     title: str
     content: str
     category: Optional[str] = None

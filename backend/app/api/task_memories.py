@@ -448,6 +448,113 @@ class DocumentMemoriesResponse(BaseModel):
     query: Optional[str] = None
 
 
+class SharedMemoryItem(BaseModel):
+    """共享记忆条目"""
+    id: str
+    agent_id: str
+    content: str
+    memory_type: str
+    importance: float
+    visibility: str
+    created_at: str
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class SharedMemoriesResponse(BaseModel):
+    """共享记忆响应"""
+    memories: List[SharedMemoryItem]
+    total: int
+
+
+# ============================================================
+# 共享记忆查询接口（修复 2026-03-18）
+# ============================================================
+
+@router.get(
+    "/memories/shared",
+    response_model=SharedMemoriesResponse,
+    tags=["共享记忆"],
+    summary="查询共享记忆",
+    description="""
+    查询所有共享记忆
+    
+    **参数**:
+    - **limit**: 返回数量（默认 20，最大 100）
+    - **offset**: 偏移量（用于分页）
+    
+    **返回**:
+    - memories: 共享记忆列表
+    - total: 总数量
+    """,
+)
+async def get_shared_memories(
+    limit: int = Query(default=20, ge=1, le=100, description="返回数量"),
+    offset: int = Query(default=0, ge=0, description="偏移量")
+):
+    """
+    查询所有共享记忆
+    
+    直接查询 shared_memories 表，返回所有共享记忆。
+    """
+    try:
+        query = """
+            SELECT id, agent_id, content, memory_type, importance, 
+                   visibility, created_at, tags, metadata
+            FROM shared_memories
+            ORDER BY importance DESC, created_at DESC
+            LIMIT $1 OFFSET $2
+        """
+        rows = await db.fetch(query, limit, offset)
+        
+        memories = []
+        for row in rows:
+            # 处理 metadata 和 tags（可能是字符串或 dict）
+            import json
+            metadata_raw = row['metadata']
+            if isinstance(metadata_raw, str):
+                try:
+                    metadata = json.loads(metadata_raw)
+                except json.JSONDecodeError:
+                    metadata = {}
+            else:
+                metadata = metadata_raw or {}
+            
+            tags_raw = row['tags']
+            if isinstance(tags_raw, str):
+                try:
+                    tags = json.loads(tags_raw)
+                except json.JSONDecodeError:
+                    tags = []
+            else:
+                tags = tags_raw or []
+            
+            memories.append(SharedMemoryItem(
+                id=str(row['id']),
+                agent_id=str(row['agent_id']),
+                content=row['content'],
+                memory_type=row['memory_type'],
+                importance=row['importance'],
+                visibility=row['visibility'],
+                created_at=str(row['created_at']),
+                tags=tags,
+                metadata=metadata
+            ))
+        
+        # 获取总数
+        count_query = "SELECT COUNT(*) FROM shared_memories"
+        total = await db.fetchval(count_query)
+        
+        return SharedMemoriesResponse(memories=memories, total=total)
+    
+    except Exception as e:
+        logger.error(f"查询共享记忆失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"查询失败: {str(e)}"
+        )
+
+
 @router.get(
     "/memories/documents",
     response_model=DocumentMemoriesResponse,
