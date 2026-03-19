@@ -5,11 +5,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wen41/memory-hub">
-    <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
+  <a href="https://www.npmjs.com/package/memory-hub">
+    <img src="https://img.shields.io/npm/v/memory-hub" alt="npm version">
+  </a>
+  <a href="https://www.npmjs.com/package/memory-hub">
+    <img src="https://img.shields.io/npm/dm/memory-hub" alt="npm downloads">
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+    <img src="https://img.shields.io/github/license/wenhao4126/memory-hub" alt="GitHub license">
+  </a>
+  <a href="https://github.com/wen41/memory-hub">
+    <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
   </a>
   <a href="docker-compose.yml">
     <img src="https://img.shields.io/badge/docker-ready-brightgreen.svg" alt="Docker">
