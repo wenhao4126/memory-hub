@@ -1,6 +1,6 @@
 {
   "name": "memory-hub",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "多智能体记忆中枢 - Centralized memory management for AI agents",
   "type": "module",
   "main": "lib/commands.js",
