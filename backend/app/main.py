@@ -8,8 +8,10 @@
 
 import os
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 
 from .config import settings
@@ -20,6 +22,14 @@ from .api.routes_knowledge import router as knowledge_router
 from .api.routes_memories_dual import router as dual_memories_router
 from .api.task_memories import router as task_memories_router
 from .api.routes_search import router as search_router
+from .auth import verify_api_key
+from .rate_limit import limiter, setup_rate_limiting
+from .models.schemas import HealthResponse
+from .errors import (
+    global_exception_handler,
+    validation_exception_handler,
+    APIException
+)
 
 
 # ============================================================
@@ -127,12 +137,27 @@ app = FastAPI(
     * 💾 **记忆存储**：支持多种记忆类型的事实、偏好、技能、经验
     * 🔍 **向量搜索**：基于语义相似度的智能检索
     * 🔄 **记忆遗忘**：基于重要性和访问频率的自动清理
+    * 🔐 **API 认证**：基于 API Key 的安全认证
+    * ⚡ **请求限流**：防止滥用和过载
     
     ## 快速开始
     
     1. **创建智能体** → `POST /api/v1/agents`
     2. **创建记忆** → `POST /api/v1/memories`
     3. **搜索记忆** → `POST /api/v1/memories/search/text`
+    
+    ## API 认证
+    
+    所有 API 请求都需要在请求头中提供 API Key：
+    ```
+    X-API-Key: your_api_key_here
+    ```
+    
+    ## 限流规则
+    
+    * 默认限制：60 次/分钟
+    * 每小时限制：1000 次
+    * 超过限制将返回 429 错误
     
     ## 技术栈
     
@@ -156,6 +181,18 @@ app = FastAPI(
     }
 )
 
+
+# ============================================================
+# 全局异常处理器 - 统一错误响应格式
+# ============================================================
+from fastapi.exceptions import RequestValidationError
+
+# 注册全局异常处理器
+app.add_exception_handler(Exception, global_exception_handler)
+app.add_exception_handler(APIException, global_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+
 # CORS 中间件配置
 # 安全说明：生产环境应限制允许的来源，而非使用 "*"
 # 通过 ALLOWED_ORIGINS 环境变量配置（多个用逗号分隔）
@@ -168,14 +205,53 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+# 配置限流中间件（必须在 CORS 之后，路由之前）
+setup_rate_limiting(app)
+
 # 注册路由
 # 注意：具体路由（如 /memories/documents）必须在参数路由（如 /memories/{memory_id}）之前注册
+
+# 健康检查端点（不需要认证）
+@app.get(
+    "/api/v1/health",
+    response_model=HealthResponse,
+    tags=["⭐ 推荐接口"],
+    summary="健康检查",
+    description="检查服务是否正常运行，包括数据库连接状态"
+)
+async def health_check():
+    """
+    健康检查端点（不需要 API Key）
+    
+    用于检查服务是否正常运行
+    """
+    try:
+        # 测试数据库连接
+        await db.fetchval("SELECT 1")
+        return HealthResponse(database="connected")
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+        return HealthResponse(database=f"error: {str(e)}")
+
 app.include_router(task_memories_router, prefix="/api/v1")  # Phase 3: 任务记忆路由（先注册具体路由）
 app.include_router(router, prefix="/api/v1")
 app.include_router(conversations_router, prefix="/api/v1")
 app.include_router(knowledge_router, prefix="/api/v1")
 app.include_router(dual_memories_router, prefix="/api/v1")
 app.include_router(search_router, prefix="/api/v1")  # Phase 3: 搜索集成路由
+
+
+# 限流测试端点（用于测试限流功能）
+@app.get("/api/v1/test-rate-limit")
+@limiter.limit("5/minute")  # 严格限流：5 次/分钟
+async def test_rate_limit(request: Request):
+    """
+    限流测试端点
+    
+    用于测试限流功能是否正常工作
+    限制：5 次/分钟
+    """
+    return {"message": "OK", "limit": "5/minute", "endpoint": "test-rate-limit"}
 
 
 @app.get("/")

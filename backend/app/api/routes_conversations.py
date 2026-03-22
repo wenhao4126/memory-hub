@@ -6,9 +6,10 @@
 # 日期：2026-03-06
 # ============================================================
 
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status, Query, Depends
 from typing import List
 import uuid
+import json
 import logging
 
 from ..models.conversation import (
@@ -24,9 +25,30 @@ from ..services.conversation_service import conversation_service
 from ..services.auto_memory_service import auto_memory_service
 from ..services.dialogue_enhancement_service import dialogue_enhancement_service
 from ..database import db
+from ..auth import verify_api_key
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# 辅助函数
+# ============================================================
+
+def process_conversation_row(row: dict) -> dict:
+    """处理对话行数据，转换类型"""
+    result = dict(row)
+    
+    # 处理 metadata：asyncpg 可能返回字符串
+    if isinstance(result.get('metadata'), str):
+        try:
+            result['metadata'] = json.loads(result['metadata'])
+        except json.JSONDecodeError:
+            result['metadata'] = {}
+    elif result.get('metadata') is None:
+        result['metadata'] = {}
+    
+    return result
 
 
 # ============================================================
@@ -149,7 +171,7 @@ async def list_agent_conversations(
     )
     
     return ConversationList(
-        conversations=[Conversation(**conv) for conv in conversations],
+        conversations=[Conversation(**process_conversation_row(conv)) for conv in conversations],
         total=len(conversations),
         limit=limit,
         offset=offset
@@ -191,7 +213,7 @@ async def list_session_conversations(
     )
     
     return ConversationList(
-        conversations=[Conversation(**conv) for conv in conversations],
+        conversations=[Conversation(**process_conversation_row(conv)) for conv in conversations],
         total=len(conversations),
         limit=limit,
         offset=0

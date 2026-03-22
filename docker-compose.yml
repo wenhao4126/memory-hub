@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-memory_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-memory_pass_2026}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
       POSTGRES_DB: ${DB_NAME:-memory_hub}
     ports:
       - "5433:5432"
@@ -48,7 +48,7 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-memory_user}
-      DB_PASSWORD: ${DB_PASSWORD:-memory_pass_2026}
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
       DB_NAME: ${DB_NAME:-memory_hub}
       # API 配置
       API_HOST: 0.0.0.0
@@ -56,7 +56,7 @@ services:
       API_DEBUG: ${API_DEBUG:-false}
       # 嵌入模型配置
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-v4}
-      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1024}
       # DashScope API 配置
       DASHSCOPE_LLM_API_KEY: ${DASHSCOPE_LLM_API_KEY}
       DASHSCOPE_EMBEDDING_API_KEY: ${DASHSCOPE_EMBEDDING_API_KEY}
@@ -64,12 +64,21 @@ services:
       # LLM 配置（用于记忆提取和对话增强）
       LLM_MODEL: ${LLM_MODEL:-qwen3.5-plus}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}
+      # API 安全配置
+      MEMORY_HUB_API_KEY: ${MEMORY_HUB_API_KEY}
+      API_KEY_ENABLED: ${API_KEY_ENABLED:-true}
+      # 限流配置
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-1000}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
+      # 挂载 app 目录（开发模式，便于代码更新）
+      - ./backend/app:/app/app:ro
       # 挂载 agents 目录（搜索服务依赖）
       - ./agents:/app/agents:ro
       # 挂载文档存储目录（Obsidian vault）
@@ -87,7 +96,7 @@ services:
   # pgAdmin 管理界面（可选）
   # ============================================================
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8.12
     container_name: memory-hub-admin
     restart: unless-stopped
     environment:

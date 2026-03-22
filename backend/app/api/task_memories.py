@@ -19,7 +19,7 @@
 #   - 查询流程：先查 shared_memories → 提取 knowledge_id → 查 knowledge 表
 # ============================================================
 
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status, Query, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import logging
@@ -28,8 +28,9 @@ import uuid
 from ..services.task_memory_service import task_memory_service
 from ..services.knowledge_service import knowledge_service
 from ..database import db
+from ..auth import verify_api_key
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
 
 

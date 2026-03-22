@@ -7,7 +7,7 @@
 # 更新：2026-03-17 - 添加权限校验
 # ============================================================
 
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status, Query, Depends
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -19,8 +19,9 @@ from ..services.memory_service import memory_service
 from ..models.schemas import MemoryCreate, MemoryTextSearchRequest, MemorySearchResult
 from ..database import db
 from ..services.permission_service import permission_service
+from ..auth import verify_api_key
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
 
 
@@ -172,13 +173,43 @@ async def list_agent_memories_dual(
     tags=["双表记忆"],
     summary="搜索私人记忆",
 )
-async def search_private_memories(
-    agent_id: str,
-    query: str,
+async def search_private_memories_post(
+    agent_id: str = Query(...),
+    query: str = Query(...),
     limit: int = Query(default=10, ge=1, le=50)
 ):
     """
-    搜索私人记忆（仅当前智能体）
+    搜索私人记忆（仅当前智能体）- POST
+    
+    **参数**:
+    - **agent_id**: 智能体 ID
+    - **query**: 搜索文本
+    - **limit**: 返回数量
+    """
+    try:
+        results = await memory_service.search_private(agent_id, query, limit)
+        return results
+    except Exception as e:
+        logger.error(f"搜索私人记忆失败：{e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"搜索失败：{str(e)}"
+        )
+
+
+@router.get(
+    "/memories/search/private",
+    response_model=List[dict],
+    tags=["双表记忆"],
+    summary="搜索私人记忆（GET）",
+)
+async def search_private_memories(
+    agent_id: str = Query(...),
+    query: str = Query(...),
+    limit: int = Query(default=10, ge=1, le=50)
+):
+    """
+    搜索私人记忆（仅当前智能体）- GET
     
     **参数**:
     - **agent_id**: 智能体 ID
@@ -202,13 +233,43 @@ async def search_private_memories(
     tags=["双表记忆"],
     summary="搜索共同记忆",
 )
-async def search_shared_memories(
-    agent_id: str,
-    query: str,
+async def search_shared_memories_post(
+    agent_id: str = Query(...),
+    query: str = Query(...),
     limit: int = Query(default=10, ge=1, le=50)
 ):
     """
-    搜索共同记忆（团队共享）
+    搜索共同记忆（团队共享）- POST
+    
+    **参数**:
+    - **agent_id**: 智能体 ID
+    - **query**: 搜索文本
+    - **limit**: 返回数量
+    """
+    try:
+        results = await memory_service.search_shared(agent_id, query, limit)
+        return results
+    except Exception as e:
+        logger.error(f"搜索共同记忆失败：{e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"搜索失败：{str(e)}"
+        )
+
+
+@router.get(
+    "/memories/search/shared",
+    response_model=List[dict],
+    tags=["双表记忆"],
+    summary="搜索共同记忆（GET）",
+)
+async def search_shared_memories(
+    agent_id: str = Query(...),
+    query: str = Query(...),
+    limit: int = Query(default=10, ge=1, le=50)
+):
+    """
+    搜索共同记忆（团队共享）- GET
     
     **参数**:
     - **agent_id**: 智能体 ID

@@ -17,14 +17,15 @@
 #   GET /api/v1/search/history - 查看搜索历史
 # ============================================================
 
-from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi import APIRouter, HTTPException, Query, Body, Depends
 from typing import List, Optional
 from pydantic import BaseModel, Field
 import logging
 
 from ..services.search_integration_service import search_integration_service
+from ..auth import verify_api_key
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
 
 

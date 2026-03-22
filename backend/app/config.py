@@ -65,7 +65,7 @@ class Settings:
         # 嵌入模型配置（DashScope API）
         # text-embedding-v4 输出 1024 维向量
         self.EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-v4")
-        self.EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
+        self.EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", os.getenv("VECTOR_DIMENSIONS", "1024")))
         
         # DashScope API 配置
         # ⚠️ 重要：两个 API Key 用途不同，不能混用！
@@ -104,6 +104,15 @@ class Settings:
             "ALLOWED_ORIGINS", 
             "http://localhost:3000,http://localhost:8080"
         )
+        
+        # API 安全配置
+        self.API_KEY: str = os.getenv("MEMORY_HUB_API_KEY", "")
+        self.API_KEY_ENABLED: bool = os.getenv("API_KEY_ENABLED", "true").lower() == "true"
+        
+        # 限流配置
+        self.RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+        self.RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+        self.RATE_LIMIT_PER_HOUR: int = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
     
     @property
     def allowed_origins_list(self) -> list:

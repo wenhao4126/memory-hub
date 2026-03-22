@@ -30,6 +30,9 @@ dashscope>=1.20.0  # 阿里云 DashScope SDK（官方推荐）
 # 开发工具
 python-dotenv>=1.0.0
 
+# 安全和限流
+slowapi>=0.1.9  # FastAPI 限流库
+
 # 测试（仅在开发环境使用，生产镜像可移除）
 # pytest>=8.0.0
 # pytest-asyncio>=0.24.0

@@ -12,7 +12,7 @@
 #   - 此 API 直接查询 knowledge 表
 # ============================================================
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 import uuid
 import logging
@@ -27,8 +27,9 @@ from ..models.schemas import (
     KnowledgeSearchResponse
 )
 from ..services.knowledge_service import knowledge_service
+from ..auth import verify_api_key
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
 
 
@@ -38,14 +39,23 @@ logger = logging.getLogger(__name__)
 
 def process_knowledge_row(row: dict) -> dict:
     """处理知识行数据，转换类型"""
-    result = dict(row)
-    # 处理 metadata：asyncpg 可能返回字符串
     import json
+    result = dict(row)
+    
+    # 处理 metadata：asyncpg 可能返回字符串
     if isinstance(result.get('metadata'), str):
         try:
             result['metadata'] = json.loads(result['metadata'])
         except json.JSONDecodeError:
             result['metadata'] = {}
+    elif result.get('metadata') is None:
+        result['metadata'] = {}
+    
+    # 处理 agent_id：数据库中可能为 NULL，但 Pydantic UUID 需要字符串
+    if result.get('agent_id') is None:
+        # 生成一个默认的 UUID（用于兼容旧数据）
+        result['agent_id'] = uuid.UUID('00000000-0000-0000-0000-000000000000')
+    
     return result
 
 
