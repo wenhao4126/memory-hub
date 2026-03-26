@@ -24,6 +24,7 @@ from .api.task_memories import router as task_memories_router
 from .api.routes_search import router as search_router
 from .api.routes_versions import router as versions_router  # Phase 3: 版本控制
 from .api.coder_tasks import router as coder_tasks_router  # 小码任务路由
+from .api.routes_batch import router as batch_router  # 第2周：批量接口
 from .auth import verify_api_key
 from .rate_limit import limiter, setup_rate_limiting, close_rate_limiter
 from .models.schemas import HealthResponse
@@ -252,6 +253,7 @@ app.include_router(dual_memories_router, prefix="/api/v1")
 app.include_router(search_router, prefix="/api/v1")  # Phase 3: 搜索集成路由
 app.include_router(versions_router, prefix="/api/v1")  # Phase 3: 版本控制路由
 app.include_router(coder_tasks_router, prefix="/api/v1")  # 小码任务路由
+app.include_router(batch_router, prefix="/api/v1")  # 第2周：批量接口
 
 
 # 限流测试端点（用于测试限流功能）
