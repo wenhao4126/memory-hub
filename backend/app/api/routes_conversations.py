@@ -21,6 +21,7 @@ from ..models.conversation import (
     EnhancedChatRequest,
     EnhancedReply
 )
+from ..models.schemas import ErrorResponse
 from ..services.conversation_service import conversation_service
 from ..services.auto_memory_service import auto_memory_service
 from ..services.dialogue_enhancement_service import dialogue_enhancement_service
@@ -401,6 +402,7 @@ async def extract_from_session(
     response_model=EnhancedReply,
     tags=[TAG_CHAT],
     summary="增强对话（推荐）",
+    operation_id="enhanced_chat_primary",
     description="""
 🚀 **核心功能**：基于记忆的智能对话
 
@@ -417,10 +419,125 @@ async def extract_from_session(
 - 自动学习：从对话中自动提取和存储新记忆
 """,
     responses={
-        200: {"description": "返回增强回复"},
-        400: {"description": "请求参数错误"},
-        404: {"description": "智能体不存在"},
-        500: {"description": "服务器内部错误"}
+        200: {
+            "description": "返回增强回复",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "reply": "嘿，憨货！记住啦，以后就用你喜欢的吐槽风格跟你聊~",
+                        "conversation_id": "660e8400-e29b-41d4-a716-446655440000",
+                        "memories_used": 2,
+                        "history_used": 0,
+                        "memory_sources": [
+                            {
+                                "id": "760e8400-e29b-41d4-a716-446655440000",
+                                "content": "用户名叫憨货",
+                                "type": "fact",
+                                "similarity": 0.95
+                            }
+                        ],
+                        "extracted_memories": [
+                            {
+                                "content": "用户名叫憨货",
+                                "memory_type": "fact",
+                                "confidence": 0.9
+                            }
+                        ],
+                        "stored_count": 1
+                    }
+                }
+            }
+        },
+        400: {
+            "model": ErrorResponse,
+            "description": "请求参数错误",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "bad_request": {
+                            "summary": "无效参数",
+                            "value": {
+                                "error": "Bad Request",
+                                "detail": "请求参数错误，请检查输入",
+                                "status_code": 400
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        401: {
+            "model": ErrorResponse,
+            "description": "缺少 API Key",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "missing_api_key": {
+                            "summary": "未提供 X-API-Key",
+                            "value": {
+                                "error": "Unauthorized",
+                                "detail": "缺少 API Key，请在请求头中提供 X-API-Key",
+                                "status_code": 401
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "API Key 无效",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_api_key": {
+                            "summary": "提供了错误的 API Key",
+                            "value": {
+                                "error": "Forbidden",
+                                "detail": "API Key 无效",
+                                "status_code": 403
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "智能体不存在",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "agent_not_found": {
+                            "summary": "智能体不存在",
+                            "value": {
+                                "error": "Not Found",
+                                "detail": "智能体不存在",
+                                "status_code": 404
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "服务器内部错误",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "server_error": {
+                            "summary": "内部错误",
+                            "value": {
+                                "error": "Internal Server Error",
+                                "detail": "处理失败: 内部服务异常",
+                                "status_code": 500
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 )
 async def enhanced_chat(request: EnhancedChatRequest):

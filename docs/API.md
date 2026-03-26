@@ -182,12 +182,19 @@ await fetch(`${BASE_URL}/memories`, {
 
 ## 认证说明
 
-当前版本不需要认证（内网使用）。
+除健康检查接口外（`GET /api/v1/health`），所有 API 都需要在请求头中提供 `X-API-Key`。
 
-生产环境建议添加：
-- API Key 认证
-- JWT Token 认证
-- OAuth 2.0
+```http
+X-API-Key: your_memory_hub_api_key
+```
+
+未提供或错误的 API Key 会返回：
+- `401 Unauthorized`：缺少 `X-API-Key`
+- `403 Forbidden`：API Key 无效
+
+建议在环境变量中配置：
+- 服务端：`MEMORY_HUB_API_KEY`
+- SDK/客户端：`MEMORY_HUB_API_KEY`（用于自动注入请求头）
 
 ---
 

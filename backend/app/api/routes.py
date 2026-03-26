@@ -53,10 +53,12 @@ TAG_MAINTAIN = "维护"
 # ============================================================
 
 @router.post(
-    "/chat",
+    "/legacy/chat",
     response_model=EnhancedReply,
     tags=[TAG_RECOMMEND],
-    summary="增强对话（推荐）",
+    summary="增强对话（兼容旧路由，建议迁移到 conversations 路由）",
+    deprecated=True,
+    operation_id="enhanced_chat_legacy",
     description="""
 🚀 **核心功能**：基于记忆的智能对话
 
@@ -439,11 +441,13 @@ async def delete_agent(agent_id: str):
 # ============================================================
 
 @router.post(
-    "/memories", 
+    "/legacy/memories", 
     response_model=MessageResponse, 
     status_code=status.HTTP_201_CREATED,
     tags=[TAG_RECOMMEND],
-    summary="创建记忆（推荐）",
+    summary="创建记忆（旧版兼容，建议使用双表路由）",
+    deprecated=True,
+    operation_id="create_memory_legacy",
     responses={
         201: {"description": "记忆创建成功"},
         400: {"model": ErrorResponse, "description": "请求参数错误"},
@@ -594,7 +598,9 @@ async def update_memory(memory_id: str, memory_update: MemoryUpdate):
     "/memories/{memory_id}", 
     response_model=MessageResponse,
     tags=[TAG_MEMORY],
-    summary="删除记忆",
+    summary="删除记忆（旧版兼容）",
+    deprecated=True,
+    operation_id="delete_memory_legacy",
     responses={
         200: {"description": "记忆删除成功"},
         400: {"model": ErrorResponse, "description": "无效的 ID 格式"},
@@ -752,10 +758,12 @@ async def search_memories_semantic(request: MemoryTextSearchRequest):
 
 
 @router.get(
-    "/agents/{agent_id}/memories", 
+    "/legacy/agents/{agent_id}/memories", 
     response_model=List[dict],
     tags=[TAG_MEMORY],
-    summary="列出智能体的所有记忆",
+    summary="列出智能体记忆（旧版兼容，建议使用双表路由）",
+    deprecated=True,
+    operation_id="list_agent_memories_legacy",
     responses={
         200: {"description": "返回记忆列表"},
         400: {"model": ErrorResponse, "description": "无效的 ID 格式"},

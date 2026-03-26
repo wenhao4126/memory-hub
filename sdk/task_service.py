@@ -21,6 +21,7 @@ import asyncio
 import logging
 import uuid
 import json
+import os
 import httpx
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -177,13 +178,17 @@ class MemoryClient:
         """
         from .config import settings
         self.base_url = base_url or settings.MEMORY_API_URL or "http://localhost:8000/api/v1"
+        self.api_key = os.getenv("MEMORY_HUB_API_KEY", "")
         self._client: Optional[httpx.AsyncClient] = None
         logger.info(f"MemoryClient 初始化，API 地址: {self.base_url}")
     
     async def _get_client(self) -> httpx.AsyncClient:
-        """获取 HTTP 客户端（懒加载）"""
+        """获取 HTTP 客户端（懒加载，统一注入 API Key）"""
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=30.0)
+            headers = {}
+            if self.api_key:
+                headers["X-API-Key"] = self.api_key
+            self._client = httpx.AsyncClient(timeout=30.0, headers=headers)
         return self._client
     
     async def close(self):
@@ -333,13 +338,17 @@ class TaskService:
         """
         from .config import settings
         self.api_base = api_base_url or settings.MEMORY_API_URL or "http://localhost:8000/api/v1"
+        self.api_key = os.getenv("MEMORY_HUB_API_KEY", "")
         self._client: Optional[httpx.AsyncClient] = None
         logger.info(f"TaskService 初始化（HTTP API 模式），API 地址: {self.api_base}")
     
     async def _get_client(self) -> httpx.AsyncClient:
-        """获取 HTTP 客户端（懒加载）"""
+        """获取 HTTP 客户端（懒加载，统一注入 API Key）"""
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=30.0)
+            headers = {}
+            if self.api_key:
+                headers["X-API-Key"] = self.api_key
+            self._client = httpx.AsyncClient(timeout=30.0, headers=headers)
         return self._client
     
     async def close(self):
