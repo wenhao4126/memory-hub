@@ -12,6 +12,10 @@
 # 日期：2026-03-17
 # 规则：傻妞写，小码读
 # ============================================================
+# HTTP API 改造：不再直连数据库
+# 日期：2026-03-20
+# 憨货决策：统一使用 HTTP API，不再使用 SDK 直连数据库
+# ============================================================
 
 import asyncio
 import logging
@@ -20,10 +24,6 @@ import json
 import httpx
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-
-import asyncpg
-
-from .config import settings
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -175,6 +175,7 @@ class MemoryClient:
         Args:
             base_url: 记忆系统 API 地址（默认从配置读取）
         """
+        from .config import settings
         self.base_url = base_url or settings.MEMORY_API_URL or "http://localhost:8000/api/v1"
         self._client: Optional[httpx.AsyncClient] = None
         logger.info(f"MemoryClient 初始化，API 地址: {self.base_url}")
@@ -307,6 +308,10 @@ class TaskService:
     """
     任务服务类 - 并行任务系统的 Python SDK
     
+    **HTTP API 版本**（2026-03-20 改造）
+    
+    不再直连数据库，所有操作通过 HTTP API 完成
+    
     功能：
         - create_task(): 创建新任务
         - acquire_task(): 领取待执行任务
@@ -314,72 +319,35 @@ class TaskService:
         - complete_task(): 完成任务
         - fail_task(): 标记任务失败
         - get_task(): 查询任务详情
+        - list_tasks(): 列出任务
         - get_task_statistics(): 获取任务统计
-        - cleanup_expired_locks(): 清理过期锁
     """
     
-    def __init__(self, db_url: str = None):
+    def __init__(self, api_base_url: str = None):
         """
         初始化任务服务
         
         Args:
-            db_url: 数据库连接字符串（格式：postgresql://user:pass@host:port/dbname）
-                   如果不提供，则从环境变量 DATABASE_URL 读取
+            api_base_url: Memory Hub API 地址（格式：http://host:port/api/v1）
+                         如果不提供，则从环境变量 MEMORY_API_URL 读取
         """
-        self.db_url = db_url or settings.DATABASE_URL
-        self._pool: Optional[asyncpg.Pool] = None
-        logger.info(f"TaskService 初始化，数据库: {self._mask_password(self.db_url)}")
+        from .config import settings
+        self.api_base = api_base_url or settings.MEMORY_API_URL or "http://localhost:8000/api/v1"
+        self._client: Optional[httpx.AsyncClient] = None
+        logger.info(f"TaskService 初始化（HTTP API 模式），API 地址: {self.api_base}")
     
-    def _mask_password(self, url: str) -> str:
-        """隐藏密码，用于日志输出"""
-        if '@' in url and ':' in url:
-            # postgresql://user:password@host:port/db -> postgresql://user:***@host:port/db
-            parts = url.split('://')
-            if len(parts) == 2:
-                auth_host = parts[1].split('@')
-                if len(auth_host) == 2:
-                    user_pass = auth_host[0].split(':')
-                    if len(user_pass) == 2:
-                        return f"{parts[0]}://{user_pass[0]}:***@{auth_host[1]}"
-        return url
-    
-    async def _get_pool(self) -> asyncpg.Pool:
-        """获取数据库连接池（懒加载）"""
-        if self._pool is None:
-            # 创建连接池时设置 JSON 编码器
-            self._pool = await asyncpg.create_pool(
-                self.db_url,
-                min_size=5,
-                max_size=20,
-                command_timeout=60,
-                init=self._init_connection
-            )
-            logger.info("数据库连接池创建成功")
-        return self._pool
-    
-    async def _init_connection(self, conn):
-        """初始化数据库连接，设置 JSON 编解码器"""
-        # 设置 jsonb 类型的编解码器
-        await conn.set_type_codec(
-            'jsonb',
-            encoder=lambda v: json.dumps(v),
-            decoder=lambda v: json.loads(v),
-            schema='pg_catalog'
-        )
-        # 设置 json 类型的编解码器
-        await conn.set_type_codec(
-            'json',
-            encoder=lambda v: json.dumps(v),
-            decoder=lambda v: json.loads(v),
-            schema='pg_catalog'
-        )
+    async def _get_client(self) -> httpx.AsyncClient:
+        """获取 HTTP 客户端（懒加载）"""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=30.0)
+        return self._client
     
     async def close(self):
-        """关闭数据库连接池"""
-        if self._pool:
-            await self._pool.close()
-            self._pool = None
-            logger.info("数据库连接池已关闭")
+        """关闭 HTTP 客户端"""
+        if self._client:
+            await self._client.aclose()
+            self._client = None
+            logger.info("TaskService HTTP 客户端已关闭")
     
     # ============================================================
     # 任务创建
@@ -399,7 +367,7 @@ class TaskService:
         agent_type: str = None
     ) -> Optional[str]:
         """
-        创建新任务
+        创建新任务（通过 HTTP API）
         
         Args:
             task_type: 任务类型（search/write/code/review/analyze/design/layout/custom）
@@ -421,21 +389,11 @@ class TaskService:
         Raises:
             PermissionDeniedError: 无权限创建任务
             ValueError: 参数验证失败
-            Exception: 数据库操作失败
-        
-        设计决策（2026-03-16）:
-            - 只有小码（team-coder）的任务才持久化到数据库
-            - 其他智能体（小搜、小写、小审等）的任务是一次性的，不需要保存
-            - 这样可以避免数据混乱，减少数据库负担
-        
-        权限规则（2026-03-17 憨货亲定）:
-            - 只有傻妞能创建任务（写入 parallel_tasks）
-            - 小码池只能读取任务，不能创建
+            Exception: HTTP API 调用失败
         """
         # ============================================================
         # 【权限校验】只有傻妞能创建任务
         # ============================================================
-        # 获取调用者 agent_id（从参数或环境变量）
         caller_agent_id = agent_id or params.get('creator_agent_id') if params else None
         
         if caller_agent_id:
@@ -451,7 +409,6 @@ class TaskService:
         # ============================================================
         from .config import is_persistence_enabled
         
-        # 如果指定了 agent_type，检查是否需要持久化
         if agent_type is not None and not is_persistence_enabled(agent_type):
             logger.info(f"非小码任务，不保存到数据库：{title} (agent_type={agent_type})")
             return None
@@ -465,31 +422,47 @@ class TaskService:
         if priority not in valid_priorities:
             raise ValueError(f"无效的优先级: {priority}，有效优先级: {valid_priorities}")
         
-        pool = await self._get_pool()
+        client = await self._get_client()
         
-        async with pool.acquire() as conn:
-            task_id = await conn.fetchval(
-                """
-                INSERT INTO parallel_tasks 
-                (task_type, title, description, priority, params, agent_id, 
-                 parent_task_id, timeout_minutes, max_retries)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                RETURNING id
-                """,
-                task_type,
-                title,
-                description,
-                priority,
-                params or {},
-                agent_id_to_uuid(agent_id) if agent_id else None,
-                uuid.UUID(parent_task_id) if parent_task_id else None,
-                timeout_minutes,
-                max_retries
+        payload = {
+            "task_type": task_type,
+            "title": title,
+            "description": description,
+            "priority": priority,
+            "params": params or {},
+            "timeout_minutes": timeout_minutes,
+            "max_retries": max_retries
+        }
+        
+        if agent_id:
+            payload["agent_id"] = agent_id
+        if parent_task_id:
+            payload["parent_task_id"] = parent_task_id
+        
+        try:
+            response = await client.post(
+                f"{self.api_base}/tasks",
+                json=payload
             )
+            response.raise_for_status()
+            result = response.json()
+            
+            # 从消息中提取 task_id
+            message = result.get("message", "")
+            if "ID:" in message:
+                task_id = message.split("ID:")[-1].strip()
+                logger.info(f"任务创建成功: {task_id}, 类型: {task_type}, 优先级: {priority}")
+                return task_id
+            
+            logger.info(f"任务创建成功: {message}")
+            return None
         
-        task_id_str = str(task_id)
-        logger.info(f"任务创建成功: {task_id_str}, 类型: {task_type}, 优先级: {priority}")
-        return task_id_str
+        except httpx.HTTPStatusError as e:
+            logger.error(f"创建任务失败: HTTP {e.response.status_code}, {e.response.text}")
+            raise
+        except Exception as e:
+            logger.error(f"创建任务失败: {e}")
+            raise
     
     # ============================================================
     # 任务领取
@@ -502,12 +475,7 @@ class TaskService:
         lock_duration_minutes: int = 30
     ) -> Optional[Dict[str, Any]]:
         """
-        领取待执行任务
-        
-        使用数据库函数 acquire_pending_task() 实现原子性获取：
-        - 自动创建任务锁
-        - 自动更新任务状态为 running
-        - 使用 FOR UPDATE SKIP LOCKED 避免并发冲突
+        领取待执行任务（通过 HTTP API）
         
         Args:
             agent_id: 智能体ID
@@ -527,11 +495,7 @@ class TaskService:
         
         Raises:
             PermissionDeniedError: 无权限读取任务
-            Exception: 数据库操作失败
-        
-        权限规则（2026-03-17 憨货亲定）:
-            - 只有 5 个小码（team-coder1-5）能读取/领取任务
-            - 其他智能体无权限
+            Exception: HTTP API 调用失败
         """
         # ============================================================
         # 【权限校验】只有小码池能读取任务
@@ -543,40 +507,36 @@ class TaskService:
                 f"智能体 {agent_name} 无权限领取任务。只有小码池能领取任务。"
             )
         
-        pool = await self._get_pool()
+        client = await self._get_client()
         
-        # 将任务类型转换为 PostgreSQL 数组格式
-        task_types_pg = task_types if task_types else None
-        
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
-                SELECT * FROM acquire_pending_task(
-                    $1::uuid,
-                    $2::task_type[],
-                    $3
-                )
-                """,
-                agent_id_to_uuid(agent_id),
-                task_types_pg,
-                lock_duration_minutes
+        try:
+            response = await client.post(
+                f"{self.api_base}/tasks/{{task_id}}/acquire",
+                params={
+                    "agent_id": str(agent_id_to_uuid(agent_id)),
+                    "lock_duration_minutes": lock_duration_minutes
+                }
             )
-        
-        if row:
-            task = {
-                'task_id': str(row['task_id']),
-                'task_type': row['task_type'],
-                'title': row['title'],
-                'description': row['description'],
-                'params': row['params'],
-                'priority': row['priority'],
-                'timeout_minutes': row['timeout_minutes']
-            }
-            logger.info(f"任务领取成功: {task['task_id']}, 类型: {task['task_type']}, 智能体: {agent_id}")
+            
+            if response.status_code == 404:
+                logger.debug(f"无可用任务，智能体: {agent_id}")
+                return None
+            
+            response.raise_for_status()
+            task = response.json()
+            
+            logger.info(f"任务领取成功: {task.get('task_id')}, 类型: {task.get('task_type')}, 智能体: {agent_id}")
             return task
-        else:
-            logger.debug(f"无可用任务，智能体: {agent_id}")
-            return None
+        
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                logger.debug(f"无可用任务，智能体: {agent_id}")
+                return None
+            logger.error(f"领取任务失败: HTTP {e.response.status_code}, {e.response.text}")
+            raise
+        except Exception as e:
+            logger.error(f"领取任务失败: {e}")
+            raise
     
     # ============================================================
     # 进度更新
@@ -589,11 +549,7 @@ class TaskService:
         status_message: str = ""
     ) -> bool:
         """
-        更新任务进度
-        
-        使用数据库函数 update_task_progress() 实现：
-        - 更新主表进度
-        - 记录进度历史
+        更新任务进度（通过 HTTP API）
         
         Args:
             task_id: 任务ID
@@ -607,24 +563,27 @@ class TaskService:
             ValueError: 进度值超出范围
             Exception: 任务不存在或状态不正确
         """
-        # 参数验证
         if not 0 <= progress_percent <= 100:
             raise ValueError(f"进度值必须在 0-100 范围内，当前值: {progress_percent}")
         
-        pool = await self._get_pool()
+        client = await self._get_client()
         
         try:
-            async with pool.acquire() as conn:
-                await conn.execute(
-                    "SELECT update_task_progress($1::uuid, $2, $3)",
-                    uuid.UUID(task_id),
-                    progress_percent,
-                    status_message or None
-                )
+            response = await client.put(
+                f"{self.api_base}/tasks/{task_id}",
+                json={
+                    "progress": progress_percent,
+                    "progress_message": status_message or None
+                }
+            )
+            response.raise_for_status()
             
             logger.debug(f"任务进度更新: {task_id} -> {progress_percent}%")
             return True
         
+        except httpx.HTTPStatusError as e:
+            logger.error(f"更新任务进度失败: {task_id}, HTTP {e.response.status_code}, {e.response.text}")
+            raise
         except Exception as e:
             logger.error(f"更新任务进度失败: {task_id}, 错误: {e}")
             raise
@@ -641,14 +600,7 @@ class TaskService:
         memory_visibility: str = None
     ) -> Dict[str, Any]:
         """
-        完成任务（自动写入记忆系统）
-        
-        使用数据库函数 complete_task() 实现：
-        - 更新任务状态为 completed
-        - 设置进度为 100%
-        - 删除任务锁
-        - 记录完成时间
-        - 【Phase 3 新增】自动将任务结果写入记忆系统
+        完成任务（通过 HTTP API，自动写入记忆系统）
         
         Args:
             task_id: 任务ID
@@ -667,7 +619,7 @@ class TaskService:
         Raises:
             Exception: 任务不存在或状态不正确
         """
-        pool = await self._get_pool()
+        client = await self._get_client()
         result = {
             "success": False,
             "task_id": task_id,
@@ -697,14 +649,13 @@ class TaskService:
             result["duration_seconds"] = duration_seconds
             
             # ============================================================
-            # 步骤 2：调用数据库函数完成任务
+            # 步骤 2：调用 HTTP API 完成任务
             # ============================================================
-            async with pool.acquire() as conn:
-                await conn.execute(
-                    "SELECT complete_task($1::uuid, $2, NULL)",
-                    uuid.UUID(task_id),
-                    result_summary or {}
-                )
+            response = await client.post(
+                f"{self.api_base}/tasks/{task_id}/complete",
+                params={"result": json.dumps(result_summary) if result_summary else None}
+            )
+            response.raise_for_status()
             
             logger.info(f"任务完成: {task_id}, 耗时: {duration_seconds}s")
             
@@ -722,18 +673,15 @@ class TaskService:
                     
                     if memory_id:
                         # 更新任务的 memory_id 字段
-                        async with pool.acquire() as conn:
-                            await conn.execute(
-                                "UPDATE parallel_tasks SET memory_id = $1 WHERE id = $2",
-                                uuid.UUID(memory_id),
-                                uuid.UUID(task_id)
-                            )
+                        await client.put(
+                            f"{self.api_base}/tasks/{task_id}",
+                            json={"result": {"memory_id": memory_id}}
+                        )
                         
                         result["memory_id"] = memory_id
                         logger.info(f"任务记忆已创建: task_id={task_id}, memory_id={memory_id}")
                 
                 except Exception as e:
-                    # 记忆创建失败不影响任务完成
                     logger.warning(f"创建任务记忆失败（不影响任务完成）: {e}")
             
             result["success"] = True
@@ -767,26 +715,19 @@ class TaskService:
             
             # ============================================================
             # 【核心逻辑】只保存有文档/资源地址的记忆
-            # 憨货决策（2026-03-16）：
-            #   - 公共记忆数据表只保存文档位置/资源地址
-            #   - 没有文档的搜索结果不保存到记忆系统
-            #   - 避免记忆系统被无用数据污染
             # ============================================================
             documents = []
             urls = []
             file_paths = []
             
             if result_summary:
-                # 提取文档列表
                 documents = result_summary.get('documents', [])
                 urls = result_summary.get('urls', [])
                 file_paths = result_summary.get('file_paths', [])
                 
-                # 兼容旧格式：检查 result_summary 顶层是否有 url
                 if 'url' in result_summary and result_summary['url']:
                     urls.append(result_summary['url'])
                 
-                # 兼容旧格式：检查 results 列表中的 url
                 results_list = result_summary.get('results', [])
                 if isinstance(results_list, list):
                     for r in results_list:
@@ -796,14 +737,12 @@ class TaskService:
                             if r.get('doc_url'):
                                 urls.append(r['doc_url'])
             
-            # 如果没有文档/资源，不保存到记忆系统
             if not documents and not urls and not file_paths:
                 logger.info(
                     f"任务 {task.get('id')} 没有文档/资源地址，不保存到记忆系统"
                 )
                 return None
             
-            # 获取任务信息
             task_type = task.get('task_type', 'custom')
             title = task.get('title', '未知任务')
             description = task.get('description', '')
@@ -819,27 +758,24 @@ class TaskService:
                 desc_short = description[:200] + ('...' if len(description) > 200 else '')
                 content_parts.append(f"描述：{desc_short}")
             
-            # 添加文档信息
             if documents:
                 content_parts.append(f"\n文档 ({len(documents)} 个):")
-                for i, doc in enumerate(documents[:5], 1):  # 最多显示 5 个
+                for i, doc in enumerate(documents[:5], 1):
                     doc_title = doc.get('title', '未知')
                     doc_url = doc.get('url', '')
                     content_parts.append(f"  {i}. {doc_title}")
                     if doc_url:
                         content_parts.append(f"     {doc_url}")
             
-            # 添加 URL 信息
             if urls:
-                unique_urls = list(set(urls))  # 去重
+                unique_urls = list(set(urls))
                 content_parts.append(f"\n资源链接 ({len(unique_urls)} 个):")
-                for i, url in enumerate(unique_urls[:10], 1):  # 最多显示 10 个
+                for i, url in enumerate(unique_urls[:10], 1):
                     content_parts.append(f"  {i}. {url}")
             
-            # 添加文件路径信息
             if file_paths:
                 content_parts.append(f"\n文件路径 ({len(file_paths)} 个):")
-                for i, path in enumerate(file_paths[:10], 1):  # 最多显示 10 个
+                for i, path in enumerate(file_paths[:10], 1):
                     content_parts.append(f"  {i}. {path}")
             
             if agent_name:
@@ -847,10 +783,6 @@ class TaskService:
             
             content = "\n".join(content_parts)
             
-            # ============================================================
-            # 构建文档记忆元数据
-            # 必须包含 url/title/source 字段
-            # ============================================================
             metadata = {
                 "task_id": str(task['id']),
                 "task_type": task_type,
@@ -858,24 +790,16 @@ class TaskService:
                 "project_id": project_id,
                 "duration_seconds": duration_seconds,
                 "created_at": datetime.now().isoformat(),
-                
-                # 文档记忆必须包含的字段
                 "documents": documents,
-                "urls": list(set(urls)) if urls else [],  # 去重
+                "urls": list(set(urls)) if urls else [],
                 "file_paths": file_paths,
-                
-                # 记忆来源
                 "source": agent_name or "未知",
-                "memory_category": "document"  # 标记为文档类型记忆
+                "memory_category": "document"
             }
             
-            # ============================================================
-            # 文档记忆统一使用 "fact" 类型，重要性 0.8（高优先级）
-            # ============================================================
-            memory_type = "fact"  # 事实型记忆（文档地址）
-            importance = 0.8      # 文档记忆重要性高
+            memory_type = "fact"
+            importance = 0.8
             
-            # 创建记忆
             create_result = await memory_client.create_memory(
                 agent_id=str(task['agent_id']),
                 content=content,
@@ -908,12 +832,7 @@ class TaskService:
         retry: bool = True
     ) -> bool:
         """
-        标记任务失败
-        
-        使用数据库函数 fail_task() 实现：
-        - 如果允许重试且未超过最大重试次数，则重置为 pending
-        - 否则标记为 failed
-        - 删除任务锁
+        标记任务失败（通过 HTTP API）
         
         Args:
             task_id: 任务ID
@@ -926,16 +845,21 @@ class TaskService:
         Raises:
             Exception: 任务不存在
         """
-        pool = await self._get_pool()
+        client = await self._get_client()
         
         try:
-            async with pool.acquire() as conn:
-                retried = await conn.fetchval(
-                    "SELECT fail_task($1::uuid, $2, $3)",
-                    uuid.UUID(task_id),
-                    error_message,
-                    retry
-                )
+            response = await client.post(
+                f"{self.api_base}/tasks/{task_id}/fail",
+                params={
+                    "error_message": error_message,
+                    "retry": retry
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            message = result.get("message", "")
+            retried = "重试" in message
             
             if retried:
                 logger.warning(f"任务失败，已重试: {task_id}, 错误: {error_message}")
@@ -944,6 +868,9 @@ class TaskService:
             
             return retried
         
+        except httpx.HTTPStatusError as e:
+            logger.error(f"标记任务失败时出错: {task_id}, HTTP {e.response.status_code}, {e.response.text}")
+            raise
         except Exception as e:
             logger.error(f"标记任务失败时出错: {task_id}, 错误: {e}")
             raise
@@ -954,7 +881,7 @@ class TaskService:
     
     async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """
-        查询任务详情
+        查询任务详情（通过 HTTP API）
         
         Args:
             task_id: 任务ID
@@ -962,24 +889,17 @@ class TaskService:
         Returns:
             任务信息字典，包含所有字段。如果任务不存在，返回 None
         """
-        pool = await self._get_pool()
+        client = await self._get_client()
         
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
-                SELECT 
-                    pt.*,
-                    (SELECT json_agg(tph ORDER BY tph.created_at DESC)
-                     FROM task_progress_history tph 
-                     WHERE tph.task_id = pt.id) as progress_history
-                FROM parallel_tasks pt
-                WHERE pt.id = $1
-                """,
-                uuid.UUID(task_id)
-            )
-        
-        if row:
-            task = dict(row)
+        try:
+            response = await client.get(f"{self.api_base}/tasks/{task_id}")
+            
+            if response.status_code == 404:
+                return None
+            
+            response.raise_for_status()
+            task = response.json()
+            
             # 转换 UUID 为字符串
             task['id'] = str(task['id'])
             if task.get('agent_id'):
@@ -988,8 +908,17 @@ class TaskService:
                 task['parent_task_id'] = str(task['parent_task_id'])
             if task.get('memory_id'):
                 task['memory_id'] = str(task['memory_id'])
+            
             return task
-        return None
+        
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            logger.error(f"查询任务失败: {task_id}, HTTP {e.response.status_code}")
+            raise
+        except Exception as e:
+            logger.error(f"查询任务失败: {task_id}, 错误: {e}")
+            raise
     
     async def list_tasks(
         self,
@@ -1000,7 +929,7 @@ class TaskService:
         offset: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        列出任务
+        列出任务（通过 HTTP API）
         
         Args:
             status: 按状态过滤（可选）
@@ -1012,56 +941,43 @@ class TaskService:
         Returns:
             任务列表
         """
-        pool = await self._get_pool()
+        client = await self._get_client()
         
-        conditions = []
-        params = []
-        param_idx = 1
+        params = {
+            "limit": limit,
+            "offset": offset
+        }
         
         if status:
-            conditions.append(f"status = ${param_idx}")
-            params.append(status)
-            param_idx += 1
-        
+            params["status"] = status
         if task_type:
-            conditions.append(f"task_type = ${param_idx}")
-            params.append(task_type)
-            param_idx += 1
-        
+            params["task_type"] = task_type
         if agent_id:
-            conditions.append(f"agent_id = ${param_idx}")
-            params.append(agent_id_to_uuid(agent_id))
-            param_idx += 1
+            params["agent_id"] = agent_id
         
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        try:
+            response = await client.get(
+                f"{self.api_base}/tasks",
+                params=params
+            )
+            response.raise_for_status()
+            tasks = response.json()
+            
+            # 转换 UUID 为字符串
+            for task in tasks:
+                task['id'] = str(task['id'])
+                if task.get('agent_id'):
+                    task['agent_id'] = str(task['agent_id'])
+                if task.get('parent_task_id'):
+                    task['parent_task_id'] = str(task['parent_task_id'])
+                if task.get('memory_id'):
+                    task['memory_id'] = str(task['memory_id'])
+            
+            return tasks
         
-        query = f"""
-            SELECT * FROM parallel_tasks
-            {where_clause}
-            ORDER BY 
-                CASE priority
-                    WHEN 'urgent' THEN 1
-                    WHEN 'high' THEN 2
-                    WHEN 'normal' THEN 3
-                    WHEN 'low' THEN 4
-                END,
-                created_at DESC
-            LIMIT ${param_idx} OFFSET ${param_idx + 1}
-        """
-        params.extend([limit, offset])
-        
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(query, *params)
-        
-        tasks = []
-        for row in rows:
-            task = dict(row)
-            task['id'] = str(task['id'])
-            if task.get('agent_id'):
-                task['agent_id'] = str(task['agent_id'])
-            tasks.append(task)
-        
-        return tasks
+        except Exception as e:
+            logger.error(f"列出任务失败: {e}")
+            raise
     
     # ============================================================
     # 统计信息
@@ -1069,62 +985,42 @@ class TaskService:
     
     async def get_task_statistics(self) -> Dict[str, Any]:
         """
-        获取任务统计信息
-        
-        使用数据库函数 get_task_statistics() 实现：
-        - 按状态统计任务数量
-        - 计算平均执行时间
+        获取任务统计信息（通过 HTTP API）
         
         Returns:
             统计信息字典，包含：
             - by_status: 按状态分组的统计
             - total: 总任务数
         """
-        pool = await self._get_pool()
+        client = await self._get_client()
         
-        async with pool.acquire() as conn:
-            rows = await conn.fetch("SELECT * FROM get_task_statistics()")
+        try:
+            response = await client.get(f"{self.api_base}/tasks/statistics")
+            response.raise_for_status()
+            stats = response.json()
+            
+            logger.debug(f"任务统计: {stats}")
+            return stats
         
-        stats = {
-            'by_status': {},
-            'total': 0
-        }
-        
-        for row in rows:
-            status = row['status']
-            stats['by_status'][status] = {
-                'count': row['count'],
-                'oldest_pending': str(row['oldest_pending']) if row['oldest_pending'] else None,
-                'avg_duration': str(row['avg_duration']) if row['avg_duration'] else None
-            }
-            stats['total'] += row['count']
-        
-        logger.debug(f"任务统计: {stats}")
-        return stats
+        except Exception as e:
+            logger.error(f"获取任务统计失败: {e}")
+            raise
     
     # ============================================================
-    # 锁清理
+    # 锁清理（通过 HTTP API - 需要管理员权限）
     # ============================================================
     
     async def cleanup_expired_locks(self) -> int:
         """
         清理过期的任务锁
         
-        使用数据库函数 cleanup_expired_locks() 实现：
-        - 将过期锁对应的 running 任务重置为 pending
-        - 删除过期锁
+        注意：此功能需要管理员权限，HTTP API 暂未提供
         
         Returns:
             int: 清理的锁数量
         """
-        pool = await self._get_pool()
-        
-        async with pool.acquire() as conn:
-            count = await conn.fetchval("SELECT cleanup_expired_locks()")
-        
-        if count > 0:
-            logger.info(f"清理过期锁: {count} 个")
-        return count
+        logger.warning("cleanup_expired_locks 功能需要管理员权限，HTTP API 暂未提供")
+        return 0
 
 
 # ============================================================
@@ -1139,8 +1035,8 @@ class TaskServiceSync:
     内部使用 asyncio.run() 包装异步方法
     """
     
-    def __init__(self, db_url: str = None):
-        self._async_service = TaskService(db_url)
+    def __init__(self, api_base_url: str = None):
+        self._async_service = TaskService(api_base_url)
     
     def _run(self, coro):
         """运行异步协程"""
@@ -1150,7 +1046,6 @@ class TaskServiceSync:
             loop = None
         
         if loop:
-            # 如果已有事件循环，创建新线程运行
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, coro)
@@ -1168,15 +1063,6 @@ class TaskServiceSync:
         return self._run(self._async_service.update_progress(**kwargs))
     
     def complete_task(self, **kwargs) -> Dict[str, Any]:
-        """
-        完成任务（同步版本）
-        
-        返回：
-            - success: 是否成功
-            - task_id: 任务 ID
-            - memory_id: 创建的记忆 ID（如果有）
-            - duration_seconds: 执行耗时
-        """
         return self._run(self._async_service.complete_task(**kwargs))
     
     def fail_task(self, **kwargs) -> bool:
@@ -1184,6 +1070,9 @@ class TaskServiceSync:
     
     def get_task(self, task_id: str) -> Optional[Dict]:
         return self._run(self._async_service.get_task(task_id))
+    
+    def list_tasks(self, **kwargs) -> List[Dict]:
+        return self._run(self._async_service.list_tasks(**kwargs))
     
     def get_task_statistics(self) -> Dict:
         return self._run(self._async_service.get_task_statistics())

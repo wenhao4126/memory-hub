@@ -18,49 +18,9 @@ import os
 import sys
 import signal
 from typing import Optional
-from pathlib import Path
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# ============================================================
-# 加载 .env 文件（必须在导入其他模块之前）
-# ============================================================
-def load_env_file():
-    """
-    加载项目根目录的 .env 文件
-    
-    Worker 进程运行在宿主机上，需要显式加载 .env 文件
-    以获取正确的数据库连接配置（端口 5433 而不是 5432）
-    """
-    # 获取项目根目录（worker 的父目录）
-    project_root = Path(__file__).parent.parent
-    env_file = project_root / ".env"
-    
-    if env_file.exists():
-        logger = logging.getLogger(__name__)
-        logger.info(f"加载环境变量文件：{env_file}")
-        
-        # 使用 python-dotenv 加载
-        try:
-            from dotenv import load_dotenv
-            load_dotenv(dotenv_path=env_file)
-            logger.info("✅ 环境变量加载成功")
-        except ImportError:
-            # 如果没有安装 python-dotenv，使用简单解析
-            logger.warning("未安装 python-dotenv，使用简单解析")
-            with open(env_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        key, value = line.split('=', 1)
-                        os.environ[key.strip()] = value.strip()
-            logger.info("✅ 环境变量加载成功（简单模式）")
-    else:
-        logging.warning(f"未找到环境变量文件：{env_file}")
-
-# 在导入其他模块之前加载环境变量
-load_env_file()
 
 from worker.agent_worker import SimpleWorker
 from sdk.task_service import TaskService
@@ -114,46 +74,55 @@ class WorkerCLI:
             await task_service.close()
     
     async def _handle_task(self, task: dict) -> dict:
-        """处理任务 - 真正执行脚本"""
-        import subprocess
+        """
+        处理任务
         
+        Args:
+            task: 任务信息
+        
+        Returns:
+            任务结果
+        """
         task_id = task.get('task_id', 'unknown')
+        task_type = task.get('task_type', 'code')
         title = task.get('title', '未命名任务')
         params = task.get('params', {})
         
-        logger.info(f"[{self.agent_id}] 开始处理任务：{title}")
+        logger.info(f"[{self.agent_id}] 开始处理任务: {title}")
+        logger.info(f"  任务ID: {task_id}")
+        logger.info(f"  任务类型: {task_type}")
         
         try:
-            script_path = params.get('script_path')
+            # 模拟处理过程
+            # TODO: 在这里实现真正的任务处理逻辑
+            # 例如：调用代码生成、执行测试等
             
-            if script_path:
-                logger.info(f"  执行脚本：{script_path}")
-                await self.worker.update_progress(10, "准备执行脚本...")
-                
-                cmd = ['python3', script_path]
-                await self.worker.update_progress(30, f"执行：{' '.join(cmd)}")
-                
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-                
-                if result.returncode == 0:
-                    await self.worker.update_progress(100, "脚本执行成功")
-                    return {
-                        'status': 'success',
-                        'message': f'任务 {title} 已完成',
-                        'stdout': result.stdout[:1000],
-                        'script': script_path
-                    }
-                else:
-                    raise Exception(f"脚本失败：{result.stderr}")
-            else:
-                logger.info(f"  无脚本路径，模拟执行")
-                await self.worker.update_progress(50, "执行中...")
-                await asyncio.sleep(3)
-                await self.worker.update_progress(100, "完成")
-                return {'status': 'success', 'message': f'任务 {title} 已完成'}
-                
+            # 更新进度
+            await self.worker.update_progress(10, "初始化...")
+            await asyncio.sleep(1)
+            
+            await self.worker.update_progress(30, "分析任务...")
+            await asyncio.sleep(1)
+            
+            await self.worker.update_progress(50, "执行中...")
+            await asyncio.sleep(2)
+            
+            await self.worker.update_progress(80, "完成收尾...")
+            await asyncio.sleep(1)
+            
+            await self.worker.update_progress(100, "完成")
+            
+            result = {
+                'status': 'success',
+                'message': f'任务 {title} 已完成',
+                'output': f'这是任务 {task_id} 的处理结果'
+            }
+            
+            logger.info(f"[{self.agent_id}] 任务完成: {title}")
+            return result
+            
         except Exception as e:
-            logger.error(f"[{self.agent_id}] 任务失败：{e}")
+            logger.error(f"[{self.agent_id}] 任务失败: {e}")
             raise
     
     def _signal_handler(self):

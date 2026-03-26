@@ -275,3 +275,92 @@ class KnowledgeSearchResponse(BaseModel):
     tags: Optional[List[str]] = None
     source: Optional[str] = None
     similarity: float
+
+
+# ============================================================
+# 任务相关模型 (parallel_tasks)
+# ============================================================
+
+class TaskType(str, Enum):
+    """任务类型枚举"""
+    SEARCH = "search"
+    WRITE = "write"
+    CODE = "code"
+    REVIEW = "review"
+    ANALYZE = "analyze"
+    DESIGN = "design"
+    LAYOUT = "layout"
+    CUSTOM = "custom"
+
+
+class TaskPriority(str, Enum):
+    """任务优先级枚举"""
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class TaskStatus(str, Enum):
+    """任务状态枚举"""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class TaskCreate(BaseModel):
+    """创建任务请求模型"""
+    task_type: TaskType = Field(..., description="任务类型")
+    title: str = Field(..., min_length=1, max_length=500, description="任务标题")
+    description: Optional[str] = Field(None, description="任务描述")
+    priority: TaskPriority = Field(default=TaskPriority.NORMAL, description="优先级")
+    params: Dict[str, Any] = Field(default_factory=dict, description="任务参数")
+    agent_id: Optional[UUID] = Field(None, description="指定执行智能体ID")
+    parent_task_id: Optional[UUID] = Field(None, description="父任务ID")
+    timeout_minutes: int = Field(default=30, ge=1, le=1440, description="超时时间（分钟）")
+    max_retries: int = Field(default=3, ge=0, le=10, description="最大重试次数")
+
+
+class TaskUpdate(BaseModel):
+    """更新任务请求模型"""
+    status: Optional[TaskStatus] = Field(None, description="任务状态")
+    progress: Optional[int] = Field(None, ge=0, le=100, description="进度百分比")
+    progress_message: Optional[str] = Field(None, description="进度描述")
+    result: Optional[Dict[str, Any]] = Field(None, description="任务结果")
+    error_message: Optional[str] = Field(None, description="错误信息")
+
+
+class TaskResponse(BaseModel):
+    """任务响应模型"""
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: UUID
+    task_type: TaskType
+    title: str
+    description: Optional[str] = None
+    agent_id: Optional[UUID] = None
+    priority: TaskPriority
+    status: TaskStatus
+    progress: int = 0
+    progress_message: Optional[str] = None
+    params: Dict[str, Any] = {}
+    result: Optional[Dict[str, Any]] = None
+    timeout_minutes: int = 30
+    retry_count: int = 0
+    max_retries: int = 3
+    parent_task_id: Optional[UUID] = None
+    memory_id: Optional[UUID] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class TaskListRequest(BaseModel):
+    """任务列表请求模型"""
+    status: Optional[TaskStatus] = Field(None, description="按状态过滤")
+    task_type: Optional[TaskType] = Field(None, description="按类型过滤")
+    agent_id: Optional[UUID] = Field(None, description="按智能体过滤")
+    limit: int = Field(default=50, ge=1, le=500, description="返回数量")
+    offset: int = Field(default=0, ge=0, description="偏移量")

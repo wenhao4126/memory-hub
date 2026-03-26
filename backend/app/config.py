@@ -111,8 +111,64 @@ class Settings:
         
         # 限流配置
         self.RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
-        self.RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
-        self.RATE_LIMIT_PER_HOUR: int = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
+        self.RATE_LIMIT_PER_MINUTE: int = self._validate_rate_limit_value(
+            os.getenv("RATE_LIMIT_PER_MINUTE", "60"),
+            "RATE_LIMIT_PER_MINUTE",
+            min_value=1,
+            max_value=10000
+        )
+        self.RATE_LIMIT_PER_HOUR: int = self._validate_rate_limit_value(
+            os.getenv("RATE_LIMIT_PER_HOUR", "1000"),
+            "RATE_LIMIT_PER_HOUR",
+            min_value=1,
+            max_value=100000
+        )
+        
+        # Redis 配置（可选，用于限流存储）
+        self.REDIS_URL: Optional[str] = os.getenv("REDIS_URL", "")
+        if self.REDIS_URL == "":
+            self.REDIS_URL = None
+    
+    def _validate_rate_limit_value(
+        self, 
+        value: str, 
+        name: str, 
+        min_value: int = 1, 
+        max_value: int = 10000
+    ) -> int:
+        """
+        验证限流配置值
+        
+        Args:
+            value: 配置值字符串
+            name: 配置项名称
+            min_value: 最小允许值
+            max_value: 最大允许值
+        
+        Returns:
+            int: 验证后的整数值
+        
+        Raises:
+            ValueError: 配置值无效
+        """
+        try:
+            int_value = int(value)
+        except ValueError:
+            raise ValueError(
+                f"{name} 必须是整数，当前值: '{value}'"
+            )
+        
+        if int_value < min_value:
+            raise ValueError(
+                f"{name} 不能小于 {min_value}，当前值: {int_value}"
+            )
+        
+        if int_value > max_value:
+            raise ValueError(
+                f"{name} 不能大于 {max_value}，当前值: {int_value}"
+            )
+        
+        return int_value
     
     @property
     def allowed_origins_list(self) -> list:

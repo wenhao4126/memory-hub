@@ -398,8 +398,9 @@ class AgentWorker(ABC):
         # 提取结果摘要
         summary = result.get('summary', result.get('result_summary', result.get('message', '无')))
         
-        # 构建完成消息（使用 agent_id 作为前缀，格式如 team-coder1）
-        message = f"{self.agent_id}: ✅ 完成任务：{task_title}\n\n📋 任务ID：{task_id}\n📝 结果：{summary}"
+        # 构建完成消息（使用团队名称作为前缀，格式如 team-coder）
+        agent_name = f"team-{self.agent_type}" if self.agent_type else self.agent_id
+        message = f"{agent_name}: ✅ 完成任务：{task_title}\n\n📋 任务 ID：{task_id}\n📝 结果：{summary}"
         
         # ✅ 使用 OpenClaw CLI 发送消息到飞书
         # 注意：使用完整路径，避免 Worker 进程找不到命令
@@ -462,13 +463,13 @@ class AgentWorker(ABC):
         task_title = task.get('title', '未知任务')
         task_id = str(task.get('task_id', '未知'))
         
-        # 构建失败消息（使用 agent_id 作为前缀，格式如 team-coder1）
+        # 构建失败消息（使用团队名称作为前缀，格式如 team-coder）
+        agent_name = f"team-{self.agent_type}" if self.agent_type else self.agent_id
         if retried:
-            logger.warning(f"任务失败（已重试）: {task_id}, 错误: {error}")
-            message = f"{self.agent_id}: ❌ 任务失败：{task_title}\n\n📋 任务ID：{task_id}\n🔴 错误：{error}\n♻️ 已自动重试"
+            message = f"{agent_name}: ❌ 任务失败：{task_title}\n\n📋 任务ID：{task_id}\n🔴 错误：{error}\n♻️ 已自动重试"
         else:
             logger.error(f"任务失败: {task_id}, 错误: {error}")
-            message = f"{self.agent_id}: ❌ 任务失败：{task_title}\n\n📋 任务ID：{task_id}\n🔴 错误：{error}"
+            message = f"{agent_name}: ❌ 任务失败：{task_title}\n\n📋 任务ID：{task_id}\n🔴 错误：{error}"
         
         # ✅ 使用 OpenClaw CLI 发送消息到飞书
         # 注意：使用完整路径，避免 Worker 进程找不到命令

@@ -22,8 +22,10 @@ from .api.routes_knowledge import router as knowledge_router
 from .api.routes_memories_dual import router as dual_memories_router
 from .api.task_memories import router as task_memories_router
 from .api.routes_search import router as search_router
+from .api.routes_versions import router as versions_router  # Phase 3: 版本控制
+from .api.coder_tasks import router as coder_tasks_router  # 小码任务路由
 from .auth import verify_api_key
-from .rate_limit import limiter, setup_rate_limiting
+from .rate_limit import limiter, setup_rate_limiting, close_rate_limiter
 from .models.schemas import HealthResponse
 from .errors import (
     global_exception_handler,
@@ -103,6 +105,14 @@ tags_metadata = [
         "name": "任务记忆",
         "description": "🔗 **任务与记忆系统集成（Phase 3）**",
     },
+    {
+        "name": "版本控制",
+        "description": "📜 **记忆历史版本管理**",
+    },
+    {
+        "name": "小码任务",
+        "description": "🟡 **小码智能体任务管理（Coder Tasks）**",
+    },
 ]
 
 
@@ -112,7 +122,7 @@ async def lifespan(app: FastAPI):
     应用生命周期管理
     
     启动时：建立数据库连接
-    关闭时：断开数据库连接
+    关闭时：断开数据库连接，清理限流器资源
     """
     # 启动
     print("🚀 多智能体记忆中枢启动中...")
@@ -123,6 +133,7 @@ async def lifespan(app: FastAPI):
     # 关闭
     print("👋 多智能体记忆中枢关闭中...")
     await db.disconnect()
+    await close_rate_limiter()  # 清理限流器资源
 
 
 # 创建 FastAPI 应用
@@ -239,6 +250,8 @@ app.include_router(conversations_router, prefix="/api/v1")
 app.include_router(knowledge_router, prefix="/api/v1")
 app.include_router(dual_memories_router, prefix="/api/v1")
 app.include_router(search_router, prefix="/api/v1")  # Phase 3: 搜索集成路由
+app.include_router(versions_router, prefix="/api/v1")  # Phase 3: 版本控制路由
+app.include_router(coder_tasks_router, prefix="/api/v1")  # 小码任务路由
 
 
 # 限流测试端点（用于测试限流功能）

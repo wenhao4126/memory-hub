@@ -11,10 +11,11 @@
 3. [认证说明](#认证说明)
 4. [智能体 API](#智能体-api)
 5. [记忆 API](#记忆-api)
-6. [对话 API](#对话-api)
-7. [搜索 API](#搜索-api)
-8. [维护 API](#维护-api)
-9. [错误码](#错误码)
+6. [任务 API](#任务-api)
+7. [对话 API](#对话-api)
+8. [搜索 API](#搜索-api)
+9. [维护 API](#维护-api)
+10. [错误码](#错误码)
 
 ---
 
@@ -420,14 +421,32 @@ Content-Type: application/json
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| agent_id | string | ✅ | 所属智能体 ID（UUID） |
-| content | string | ✅ | 记忆内容 |
+| agent_id | string | ✅ **必需** | 所属智能体 ID（UUID 格式）|
+| content | string | ✅ **必需** | 记忆内容（至少 1 字符）|
 | memory_type | string | ❌ | fact/preference/skill/experience（默认 fact） |
 | importance | float | ❌ | 重要性 0-1（默认 0.5） |
 | tags | string[] | ❌ | 标签列表 |
 | metadata | object | ❌ | 额外元数据 |
 | embedding | float[] | ❌ | 向量（可选，自动生成） |
 | expires_at | datetime | ❌ | 过期时间 |
+
+**⚠️ 常见错误：**
+
+如果缺少必需字段，会返回 422 错误：
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "agent_id"],
+      "msg": "Field required"
+    }
+  ]
+}
+```
+
+**解决方案：** 确保请求体中包含 `agent_id` 和 `content` 字段。
 
 **响应（201）：**
 
@@ -703,6 +722,314 @@ Content-Type: application/json
 
 ---
 
+### ⚠️ 语义搜索端点说明
+
+**POST /memories/search/semantic 端点暂未实现！**
+
+如果访问该端点，会返回 404 错误：
+
+```json
+{"detail": "Not Found"}
+```
+
+**推荐替代方案：**
+- 使用 `POST /memories/search/text` 进行文本语义搜索
+- 该接口会自动生成向量并执行语义搜索
+
+---
+
+## 任务 API
+
+### 创建任务
+
+**请求：**
+
+```http
+POST /api/v1/tasks
+Content-Type: application/json
+
+{
+  "task_type": "code",
+  "title": "修复登录页面 bug",
+  "description": "登录页面在移动端显示异常",
+  "priority": "high",
+  "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+  "params": {},
+  "timeout_minutes": 30,
+  "max_retries": 3
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| task_type | string | ✅ **必需** | 任务类型（枚举值，见下表）|
+| title | string | ✅ **必需** | 任务标题（1-500 字符）|
+| description | string | ❌ | 任务描述 |
+| priority | string | ❌ | 优先级（枚举值，默认 `normal`）**注意：必须是字符串枚举值，不能是数字！** |
+| agent_id | string | ❌ | 指定执行智能体 ID |
+| params | object | ❌ | 任务参数（默认 {}）|
+| timeout_minutes | int | ❌ | 超时时间（默认 30，范围 1-1440）|
+| max_retries | int | ❌ | 最大重试次数（默认 3，范围 0-10）|
+
+**task_type 枚举值：**
+
+| 值 | 说明 |
+|---|---|
+| `search` | 搜索任务 |
+| `write` | 写作任务 |
+| `code` | 编码任务 |
+| `review` | 审核任务 |
+| `analyze` | 分析任务 |
+| `design` | 设计任务 |
+| `layout` | 布局任务 |
+| `custom` | 自定义任务 |
+
+**priority 枚举值：**
+
+| 值 | 说明 |
+|---|---|
+| `low` | 低优先级 |
+| `normal` | 普通优先级（默认）|
+| `high` | 高优先级 |
+| `urgent` | 紧急优先级 |
+
+**⚠️ 常见错误：**
+
+如果缺少必需字段或字段类型错误，会返回 422 错误：
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "task_type"],
+      "msg": "Field required"
+    },
+    {
+      "type": "enum",
+      "loc": ["body", "priority"],
+      "msg": "Input should be 'low', 'normal', 'high' or 'urgent'",
+      "input": 1
+    }
+  ]
+}
+```
+
+**错误示例：**
+```json
+// ❌ 错误 1：缺少 task_type
+{
+  "title": "修复 bug",
+  "priority": "high"
+}
+
+// ❌ 错误 2：priority 是数字（应该是字符串）
+{
+  "task_type": "code",
+  "title": "修复 bug",
+  "priority": 1  // 应该是 "high"、"normal" 等字符串
+}
+```
+
+**响应（201）：**
+
+```json
+{
+  "id": "770e8400-e29b-41d4-a716-446655440001",
+  "task_type": "code",
+  "title": "修复登录页面 bug",
+  "description": "登录页面在移动端显示异常",
+  "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+  "priority": "high",
+  "status": "pending",
+  "progress": 0,
+  "params": {},
+  "created_at": "2026-03-09T10:00:00Z"
+}
+```
+
+**cURL 示例：**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_type": "code",
+    "title": "修复登录页面 bug",
+    "priority": "high"
+  }'
+```
+
+---
+
+### 获取任务详情
+
+**请求：**
+
+```http
+GET /api/v1/tasks/{task_id}
+```
+
+**响应（200）：**
+
+```json
+{
+  "id": "770e8400-e29b-41d4-a716-446655440001",
+  "task_type": "code",
+  "title": "修复登录页面 bug",
+  "description": "登录页面在移动端显示异常",
+  "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+  "priority": "high",
+  "status": "running",
+  "progress": 50,
+  "progress_message": "正在分析代码...",
+  "params": {},
+  "result": null,
+  "created_at": "2026-03-09T10:00:00Z",
+  "started_at": "2026-03-09T10:01:00Z",
+  "completed_at": null
+}
+```
+
+**cURL 示例：**
+
+```bash
+curl http://localhost:8000/api/v1/tasks/770e8400-e29b-41d4-a716-446655440001
+```
+
+---
+
+### 列出任务
+
+**请求：**
+
+```http
+GET /api/v1/tasks?status=pending&agent_id=550e8400-e29b-41d4-a716-446655440000&limit=50&offset=0
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| status | string | - | 按状态过滤（pending/running/completed/failed）|
+| task_type | string | - | 按类型过滤 |
+| agent_id | string | - | 按智能体过滤 |
+| limit | int | 50 | 返回数量（1-500）|
+| offset | int | 0 | 偏移量 |
+
+**响应（200）：**
+
+```json
+[
+  {
+    "id": "任务 ID 1",
+    "task_type": "code",
+    "title": "修复 bug 1",
+    "status": "pending",
+    "priority": "high"
+  },
+  {
+    "id": "任务 ID 2",
+    "task_type": "write",
+    "title": "写文档",
+    "status": "running",
+    "priority": "normal"
+  }
+]
+```
+
+**cURL 示例：**
+
+```bash
+curl "http://localhost:8000/api/v1/tasks?status=pending&limit=10"
+```
+
+---
+
+### 更新任务状态
+
+**请求：**
+
+```http
+PUT /api/v1/tasks/{task_id}
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "progress": 100,
+  "progress_message": "任务完成",
+  "result": {
+    "files_changed": 3,
+    "lines_added": 50
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | string | ❌ | 任务状态（pending/running/completed/failed）|
+| progress | int | ❌ | 进度百分比（0-100）|
+| progress_message | string | ❌ | 进度描述 |
+| result | object | ❌ | 任务结果 |
+| error_message | string | ❌ | 错误信息（失败时）|
+
+**响应（200）：**
+
+```json
+{
+  "id": "770e8400-e29b-41d4-a716-446655440001",
+  "status": "completed",
+  "progress": 100,
+  "progress_message": "任务完成",
+  "result": {
+    "files_changed": 3,
+    "lines_added": 50
+  },
+  "completed_at": "2026-03-09T10:30:00Z"
+}
+```
+
+**cURL 示例：**
+
+```bash
+curl -X PUT http://localhost:8000/api/v1/tasks/770e8400-e29b-41d4-a716-446655440001 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "completed",
+    "progress": 100
+  }'
+```
+
+---
+
+### 删除任务
+
+**请求：**
+
+```http
+DELETE /api/v1/tasks/{task_id}
+```
+
+**响应（200）：**
+
+```json
+{
+  "message": "任务删除成功"
+}
+```
+
+**cURL 示例：**
+
+```bash
+curl -X DELETE http://localhost:8000/api/v1/tasks/770e8400-e29b-41d4-a716-446655440001
+```
+
+---
+
 ## 对话 API
 
 ### 增强对话（核心功能）⭐
@@ -727,12 +1054,42 @@ Content-Type: application/json
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| agent_id | string | ✅ | 智能体 ID |
-| session_id | string | ✅ | 会话标识（自定义） |
-| user_message | string | ✅ | 用户消息 |
+| agent_id | string | ✅ **必需** | 智能体 ID（UUID 格式）|
+| session_id | string | ✅ **必需** | 会话标识（1-255 字符）|
+| user_message | string | ✅ **必需** | 用户消息（至少 1 字符）**注意：字段名必须是 `user_message`，不是 `message`！** |
 | use_memory | boolean | ❌ | 是否使用记忆增强（默认 true） |
 | use_history | boolean | ❌ | 是否使用对话历史（默认 true） |
 | auto_extract | boolean | ❌ | 是否自动提取记忆（默认 true） |
+
+**⚠️ 常见错误：**
+
+如果缺少必需字段或字段名错误，会返回 422 错误：
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "agent_id"],
+      "msg": "Field required"
+    },
+    {
+      "type": "missing",
+      "loc": ["body", "user_message"],
+      "msg": "Field required"
+    }
+  ]
+}
+```
+
+**错误示例：**
+```json
+// ❌ 错误：字段名错误（message 应该是 user_message）
+{
+  "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "你好"  // 应该是 user_message
+}
+```
 
 **响应（200）：**
 

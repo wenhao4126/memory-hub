@@ -9,6 +9,16 @@
 import os
 from typing import Optional
 from dataclasses import dataclass
+from pathlib import Path
+
+# 自动加载 .env 文件
+from dotenv import load_dotenv
+
+# 尝试从项目根目录加载 .env
+_project_root = Path(__file__).parent.parent
+_env_file = _project_root / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 
 @dataclass

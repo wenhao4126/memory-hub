@@ -1,18 +1,61 @@
-# 多智能体并行任务系统 - 数据库脚本执行指南
+# Memory Hub - 数据库迁移指南
 
 > **作者**：小码 🟡  
 > **日期**：2026-03-16  
-> **版本**：v1.0
+> **版本**：v2.0  
+> **更新**：2026-03-24 - 添加小码任务数据表
 
 ---
 
 ## 📋 目录
 
-1. [前置条件](#前置条件)
-2. [执行步骤](#执行步骤)
-3. [验证方法](#验证方法)
-4. [测试示例](#测试示例)
-5. [常见问题](#常见问题)
+1. [概述](#概述)
+2. [迁移脚本列表](#迁移脚本列表)
+3. [前置条件](#前置条件)
+4. [执行步骤](#执行步骤)
+5. [验证方法](#验证方法)
+6. [测试示例](#测试示例)
+7. [常见问题](#常见问题)
+
+---
+
+## 概述
+
+本目录包含 Memory Hub 的所有数据库迁移脚本，用于创建和维护多智能体系统的核心数据表。
+
+### 数据表列表
+
+1. **parallel_tasks** - 并行任务主表（多智能体任务调度）
+2. **task_locks** - 分布式锁表
+3. **task_progress_history** - 任务进度历史表
+4. **coder_tasks** - 小码任务表（存储各小码完成任务的信息）⭐ NEW
+
+---
+
+## 迁移脚本列表
+
+按执行顺序排列：
+
+| 序号 | 文件名 | 描述 | 创建日期 |
+|------|--------|------|----------|
+| 01 | `01_parallel_tasks_schema.sql` | 并行任务系统数据表（3 张表） | 2026-03-16 |
+| 02 | `02_parallel_tasks_functions.sql` | 并行任务系统函数（6 个函数） | 2026-03-16 |
+| 03 | `03_add_project_id.sql` | 添加项目 ID 字段 | 2026-03-16 |
+| 04 | `04_add_file_path_to_knowledge.sql` | 添加文件路径到知识表 | 2026-03-16 |
+| 05 | `03_coder_tasks_table.sql` | 小码任务数据表 | 2026-03-24 |
+
+### 执行顺序
+
+```bash
+# 基础迁移（按顺序执行）
+docker exec -i memory-hub-postgres psql -U memory_user -d memory_hub < database/01_parallel_tasks_schema.sql
+docker exec -i memory-hub-postgres psql -U memory_user -d memory_hub < database/02_parallel_tasks_functions.sql
+docker exec -i memory-hub-postgres psql -U memory_user -d memory_hub < database/03_add_project_id.sql
+docker exec -i memory-hub-postgres psql -U memory_user -d memory_hub < database/04_add_file_path_to_knowledge.sql
+
+# 小码任务系统（新增）
+docker exec -i memory-hub-postgres psql -U memory_user -d memory_hub < database/03_coder_tasks_table.sql
+```
 
 ---
 

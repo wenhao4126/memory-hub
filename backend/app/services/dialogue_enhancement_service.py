@@ -83,9 +83,15 @@ class DialogueEnhancementService:
                 conversation_history=conversation_history
             )
         except Exception as e:
-            logger.error(f"生成增强回复失败: {e}")
-            # 降级：返回基础回复
-            enhanced_reply = f"抱歉，我现在无法访问记忆库。关于「{user_message}」，我能为你做些什么？"
+            logger.error(f"生成增强回复失败: {e}", exc_info=True)
+            # 降级：根据是否有记忆提供不同回复
+            if memories:
+                # 有记忆，但 LLM 超时 - 提供基于记忆的简单回复
+                memory_hints = "、".join([m.get("content", "")[:50] for m in memories[:3]])
+                enhanced_reply = f"我找到了一些相关信息：{memory_hints}。关于「{user_message}」，你想了解更多吗？"
+            else:
+                # 无记忆 + LLM 超时 - 提供基础回复
+                enhanced_reply = f"抱歉，我的思维模块暂时响应较慢。关于「{user_message}」，我能为你做些什么？"
         
         # 4. 构建结果
         result = {
@@ -179,7 +185,11 @@ class DialogueEnhancementService:
         agent_id: str,
         session_id: str,
         user_message: str,
-        auto_extract: bool = True
+        auto_extract: bool = True,
+        use_memory: bool = True,
+        use_history: bool = True,
+        memory_count: int = 5,
+        history_count: int = 6
     ) -> Dict[str, Any]:
         """
         对话并自动记忆（一站式接口）
@@ -205,8 +215,10 @@ class DialogueEnhancementService:
             agent_id=agent_id,
             user_message=user_message,
             session_id=session_id,
-            use_memory=True,
-            use_history=True
+            use_memory=use_memory,
+            use_history=use_history,
+            memory_count=memory_count,
+            history_count=history_count
         )
         
         # 2. 记录对话
