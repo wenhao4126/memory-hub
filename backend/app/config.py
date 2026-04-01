@@ -128,6 +128,11 @@ class Settings:
         self.REDIS_URL: Optional[str] = os.getenv("REDIS_URL", "")
         if self.REDIS_URL == "":
             self.REDIS_URL = None
+
+        # 插件仓配置（可选）
+        self.MEMORY_HUB_MODULES_ROOT: Optional[str] = os.getenv("MEMORY_HUB_MODULES_ROOT", "")
+        if self.MEMORY_HUB_MODULES_ROOT == "":
+            self.MEMORY_HUB_MODULES_ROOT = None
     
     def _validate_rate_limit_value(
         self, 

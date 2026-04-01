@@ -25,7 +25,32 @@ client = TestClient(app)
 
 class TestHealthCheck:
     """健康检查端点测试"""
-    
+
+    def test_modules_health_check(self):
+        """测试模块健康检查接口返回缓存结果"""
+        from app import main as main_module
+
+        original = main_module.MODULES_VALIDATE_RESULT
+        main_module.MODULES_VALIDATE_RESULT = {
+            "ok": True,
+            "message": "ok",
+            "registry": "/tmp/modules.json",
+            "count": 1,
+            "errors": [],
+            "modules": [{"name": "demo", "ok": True}],
+        }
+
+        try:
+            response = client.get("/api/v1/modules/health")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["ok"] is True
+            assert data["message"] == "ok"
+            assert data["count"] == 1
+            assert data["modules"][0]["name"] == "demo"
+        finally:
+            main_module.MODULES_VALIDATE_RESULT = original
+
     def test_health_check_success(self):
         """测试健康检查成功"""
         with patch('app.api.routes.db.fetchval', new_callable=AsyncMock) as mock_fetchval:

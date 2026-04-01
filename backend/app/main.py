@@ -8,6 +8,8 @@
 
 import os
 import logging
+import importlib.util
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -60,6 +62,100 @@ logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 # 获取应用日志记录器
 logger = logging.getLogger(__name__)
+
+MODULES_VALIDATE_RESULT = {
+    "ok": None,
+    "message": "not_run",
+    "registry": None,
+    "count": 0,
+    "errors": [],
+    "modules": [],
+}
+
+
+def run_modules_validate_once() -> None:
+    """可选插件仓校验：仅发现与结构校验，不执行业务模块。"""
+    global MODULES_VALIDATE_RESULT
+
+    modules_root = settings.MEMORY_HUB_MODULES_ROOT
+    if not modules_root:
+        MODULES_VALIDATE_RESULT = {
+            "ok": None,
+            "message": "modules_root_not_configured",
+            "registry": None,
+            "count": 0,
+            "errors": [],
+            "modules": [],
+        }
+        logger.info("插件仓未配置：跳过模块校验")
+        return
+
+    root_path = Path(modules_root).resolve()
+    loader_file = root_path / "core" / "module_loader.py"
+
+    if not loader_file.exists():
+        MODULES_VALIDATE_RESULT = {
+            "ok": False,
+            "message": "loader_not_found",
+            "registry": str(root_path / "registry" / "modules.json"),
+            "count": 0,
+            "errors": [f"loader_not_found: {loader_file}"],
+            "modules": [],
+        }
+        logger.warning("插件仓校验跳过：未找到 loader 文件 %s", loader_file)
+        return
+
+    try:
+        spec = importlib.util.spec_from_file_location("mh_modules_loader", loader_file)
+        if spec is None or spec.loader is None:
+            MODULES_VALIDATE_RESULT = {
+                "ok": False,
+                "message": "loader_spec_invalid",
+                "registry": str(root_path / "registry" / "modules.json"),
+                "count": 0,
+                "errors": [f"loader_spec_invalid: {loader_file}"],
+                "modules": [],
+            }
+            logger.warning("插件仓校验跳过：无法加载 loader %s", loader_file)
+            return
+
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        loader = module.ModuleLoader(root_path)
+        result = loader.validate()
+
+        MODULES_VALIDATE_RESULT = {
+            "ok": result.get("ok"),
+            "message": "ok" if result.get("ok") else "validate_failed",
+            "registry": result.get("registry"),
+            "count": result.get("count", 0),
+            "errors": result.get("errors", []),
+            "modules": result.get("modules", []),
+        }
+
+        if result.get("ok"):
+            logger.info(
+                "插件仓校验通过：registry=%s count=%s",
+                result.get("registry"),
+                result.get("count"),
+            )
+        else:
+            logger.warning(
+                "插件仓校验失败：registry=%s errors=%s",
+                result.get("registry"),
+                len(result.get("errors", [])),
+            )
+    except Exception as e:
+        MODULES_VALIDATE_RESULT = {
+            "ok": False,
+            "message": "validate_exception",
+            "registry": str(root_path / "registry" / "modules.json"),
+            "count": 0,
+            "errors": [str(e)],
+            "modules": [],
+        }
+        logger.exception("插件仓校验异常：%s", e)
 
 
 # ============================================================
@@ -128,6 +224,7 @@ async def lifespan(app: FastAPI):
     # 启动
     print("🚀 多智能体记忆中枢启动中...")
     await db.connect()
+    run_modules_validate_once()
     
     yield
     
@@ -244,6 +341,17 @@ async def health_check():
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return HealthResponse(database=f"error: {str(e)}")
+
+@app.get(
+    "/api/v1/modules/health",
+    tags=["维护"],
+    summary="模块校验状态",
+    description="返回插件仓模块发现与结构校验结果（只读）",
+)
+async def modules_health_check():
+    """插件模块健康状态（只读）。"""
+    return MODULES_VALIDATE_RESULT
+
 
 app.include_router(task_memories_router, prefix="/api/v1")  # Phase 3: 任务记忆路由（先注册具体路由）
 app.include_router(router, prefix="/api/v1")

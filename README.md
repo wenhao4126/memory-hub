@@ -94,6 +94,9 @@ docker-compose up -d
 
 # 验证安装
 curl http://localhost:8000/api/v1/health
+
+# 查看模块仓校验状态（可选）
+curl http://localhost:8000/api/v1/modules/health
 ```
 
 ---
@@ -147,6 +150,9 @@ DEFAULT_MAX_RETRIES=3
 # 日志配置
 LOG_LEVEL=INFO
 LOG_TO_FILE=false
+
+# 插件仓配置（可选）
+MEMORY_HUB_MODULES_ROOT=/home/wen/projects/memory-hub-modules
 ```
 
 ### 配置文件（config.yaml）
@@ -358,6 +364,14 @@ curl -X POST http://localhost:8000/api/v1/chat \
     "use_history": true
   }'
 ```
+
+### 查看插件模块校验状态
+
+```bash
+curl http://localhost:8000/api/v1/modules/health
+```
+
+返回字段包含：`ok`、`message`、`registry`、`count`、`errors`、`modules`。
 
 ---
 
