@@ -71,6 +71,8 @@ services:
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
       RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-1000}
+      # 插件仓路径
+      MEMORY_HUB_MODULES_ROOT: ${MEMORY_HUB_MODULES_ROOT:-/home/wen/projects/memory-hub-modules}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
