@@ -144,13 +144,20 @@ def _tool_fail(err: Exception) -> dict[str, Any]:
 
 
 @mcp.tool(name="agent_create", description="创建智能体")
-def agent_create(
-    name: str,
-    description: str | None = None,
-    capabilities: list[str] | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+def agent_create(params: dict[str, Any]) -> dict[str, Any]:
     try:
+        name = (params.get("name") or "").strip()
+        description = params.get("description")
+        capabilities = params.get("capabilities")
+        metadata = params.get("metadata")
+
+        if not name:
+            raise ApiError("name 不能为空", code="VALIDATION_ERROR")
+        if capabilities is not None and not isinstance(capabilities, list):
+            raise ApiError("capabilities 必须是数组", code="VALIDATION_ERROR")
+        if metadata is not None and not isinstance(metadata, dict):
+            raise ApiError("metadata 必须是对象", code="VALIDATION_ERROR")
+
         res = _request(
             "POST",
             "/agents",
@@ -193,22 +200,26 @@ def agent_get(agent_id: str) -> dict[str, Any]:
 
 
 @mcp.tool(name="memory_create", description="创建记忆")
-def memory_create(
-    agent_id: str,
-    content: str,
-    memory_type: str = "fact",
-    importance: float = 0.5,
-    tags: list[str] | None = None,
-    metadata: dict[str, Any] | None = None,
-    auto_route: bool = True,
-    visibility: str | None = None,
-) -> dict[str, Any]:
+def memory_create(params: dict[str, Any]) -> dict[str, Any]:
     try:
+        agent_id = (params.get("agent_id") or "").strip()
+        content = (params.get("content") or "").strip()
+        memory_type = params.get("memory_type", "fact")
+        importance = float(params.get("importance", 0.5))
+        tags = params.get("tags")
+        metadata = params.get("metadata")
+        auto_route = params.get("auto_route", True)
+        visibility = params.get("visibility")
+
         _require_uuid(agent_id, "agent_id")
-        if not content.strip():
+        if not content:
             raise ApiError("content 不能为空", code="VALIDATION_ERROR")
         if not (0.0 <= importance <= 1.0):
             raise ApiError("importance 必须在 0~1", code="VALIDATION_ERROR")
+        if tags is not None and not isinstance(tags, list):
+            raise ApiError("tags 必须是数组", code="VALIDATION_ERROR")
+        if metadata is not None and not isinstance(metadata, dict):
+            raise ApiError("metadata 必须是对象", code="VALIDATION_ERROR")
 
         payload: dict[str, Any] = {
             "agent_id": agent_id,
@@ -241,15 +252,15 @@ def memory_create(
 
 
 @mcp.tool(name="memory_search", description="搜索记忆")
-def memory_search(
-    agent_id: str,
-    query: str,
-    limit: int = 10,
-    match_threshold: float = 0.5,
-) -> dict[str, Any]:
+def memory_search(params: dict[str, Any]) -> dict[str, Any]:
     try:
+        agent_id = (params.get("agent_id") or "").strip()
+        query = (params.get("query") or "").strip()
+        limit = int(params.get("limit", 10))
+        match_threshold = float(params.get("match_threshold", 0.5))
+
         _require_uuid(agent_id, "agent_id")
-        if not query.strip():
+        if not query:
             raise ApiError("query 不能为空", code="VALIDATION_ERROR")
         limit = max(1, min(limit, 50))
         match_threshold = max(0.0, min(match_threshold, 1.0))
